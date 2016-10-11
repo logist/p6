@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.unit.reporter.Xml">
+<Description>
+Консольный отчет</Description>
+<Super>p6.unit.reporter.Abstract</Super>
+<TimeCreated>60780,45794.99486</TimeCreated>
+
+<Property name="Listener">
+<Type>p6.unit.listener.Persistent</Type>
+</Property>
+
+<Method name="Run">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set suite="",ts=..Listener.ExecuteTs
+	for  {
+		set suite=$order(^p6.unit.TestResults(ts,suite))
+		quit:suite=""
+		set File=##class(%File).%New(suite_".xml")
+		do File.Open("WSN")
+		do File.WriteLine("<?xml version=""1.0"" encoding=""Windows-1251"" ?>")
+		do File.WriteLine("<testsuite failures=""0""")
+		do File.WriteLine(" errors="""_$lg(^p6.unit.TestResults(ts,suite),4)_"""")
+		do File.WriteLine(" name="""_suite_"""")
+		do File.WriteLine(" tests="""_$lg(^p6.unit.TestResults(ts,suite),3)_"""")
+		do File.WriteLine(" time="""_($lg(^p6.unit.TestResults(ts,suite),2)-$lg(^p6.unit.TestResults(ts,suite),1))_"""")
+		do File.WriteLine(">")
+		
+		set testcase=""
+		for  {
+			set testcase=$order(^p6.unit.TestResults(ts,suite,testcase))
+			quit:testcase=""
+			do File.WriteLine("<testcase ")
+			do File.WriteLine(" name="""_testcase_"""")
+			do File.WriteLine(" classname="""_testcase_"""")
+			do File.WriteLine(" time="""_($lg(^p6.unit.TestResults(ts,suite,testcase),2)-$lg(^p6.unit.TestResults(ts,suite,testcase),1))_"""")
+			do File.WriteLine(">")
+			if $lg(^p6.unit.TestResults(ts,suite,testcase),4)>0 {
+				set method=""
+				for  {
+					set method=$order(^p6.unit.TestResults(ts,suite,testcase,method))
+					quit:method=""
+					set assert=""
+					for  {
+						set assert=$order(^p6.unit.TestResults(ts,suite,testcase,method,assert))
+						quit:assert=""
+						do File.WriteLine("<error message=""Error"">")
+						do File.WriteLine(##class(%CSP.Page).EscapeHTML($lg(^p6.unit.TestResults(ts,suite,testcase,method,assert),5)))
+						do File.WriteLine("</error>")
+					}
+				}
+			}
+			do File.WriteLine("</testcase>")
+		}
+		do File.WriteLine("</testsuite>")
+		do File.Close()
+	}
+	//kill ^p6.unit.TestResults(ts)
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

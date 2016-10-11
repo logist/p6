@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.Page">
+<Description>
+Страница редактирования</Description>
+<Super>%ZEN.Component.page</Super>
+<TimeCreated>60855,62991.518863</TimeCreated>
+
+<Parameter name="APPLICATION">
+<Description>
+Class name of application this page belongs to.</Description>
+<Default>p6.zen.Application</Default>
+</Parameter>
+
+<Parameter name="PAGENAME">
+<Description>
+Displayed name of this page.</Description>
+</Parameter>
+
+<Parameter name="DOMAIN">
+<Default>DIMAS</Default>
+</Parameter>
+
+<UDLText name="T">
+<Content><![CDATA[
+//Parameter USERPACKAGES = "p6.zen.component";
+
+]]></Content>
+</UDLText>
+
+<Property name="StdTitle">
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<XData name="Style">
+<Description>
+This Style block contains page-specific CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+/* default styles */
+body {
+	background: #EEEEEE;
+	font-family: verdana;
+}
+
+</style>
+]]></Data>
+</XData>
+
+<Method name="onkeydownHandler">
+<FormalSpec>e</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var cancelEvent=false;
+	if (zenIsIE){
+	     srcElement = event.srcElement;
+	} else { // for Mozilla
+	   event=e;
+	  srcElement = e.target;
+	}
+
+	// Change Enter to Tab  
+	if ((!event.ctrlKey) && (event.keyCode==13)
+	 && (srcElement.tagName!="BUTTON") 
+	 && ((srcElement.tagName!="INPUT")
+	     ||(srcElement.type!="button")  )
+	 && (!event.shiftKey || srcElement.tagName!="TEXTAREA")) {
+	     if (zenIsIE) {
+	   		event.keyCode=9;
+	     } else {
+		     cancelEvent=true;
+	     }
+	}
+	// ctrl-enter save form
+	if ((event.ctrlKey) && (event.keyCode==13)) {
+		srcElement.blur();
+		btSave.click();
+	}
+
+	// esc закрывает окно
+	if ((event.keyCode==27)) {
+		if (zenPage.isPopup) {
+			zenPage.firePopupAction('close','');
+		} else {
+			history.back();
+		}
+	}
+	
+	// стрелка на tab
+	if (((event.keyCode==37) || (event.keyCode==38)) && (srcElement.tagName=="BUTTON") ) {
+	    event.keyCode=9;
+	    //event.shiftKey=false;  !добавить
+	}
+	// стрелка на tab
+	if (((event.keyCode==39) || (event.keyCode==40)) && (srcElement.tagName=="BUTTON") ) {
+	    event.keyCode=9;
+	}
+	
+	if (cancelEvent) {
+		if (event.preventDefault) {
+			event.preventDefault();
+		}
+		event.cancelBubble = true;
+	}
+]]></Implementation>
+</Method>
+
+<Method name="%OnDrawHTMLHead">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set useAsync = $ZV'["5.1"
+
+	Write "<script language=""javascript"">"
+	Write "function zenClassMethod(object,method,spec,rettype,args)",!
+	Write "{",!
+	Write $C(9),"var state = new zenSerialState();",!
+	Write $C(9),"var arglist = zenBuildArgumentList(state,spec,args);",!
+	Write $C(9),"if (zenDEBUGTraceEvents) { zenTRACE('Server Class Method',method,arglist);}",!
+	Write $C(9),"var header = state.getHeader();",!
+	Write $C(9),"var body = state.getBody();",!
+	Write $C(9),"var ns = '",$ZU(5),"';",!
+	If 'useAsync {
+		Write $C(9),"var ret = ",..HyperEventCall("%ZEN.Controller.InvokeClassMethod","object._serverClass,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",0)
+	 	Write ";",!
+	 	Write $C(9),"return zenConvertType(rettype,ret);",!
+	}
+	Else {
+		Write $C(9),"if (''!=rettype) {",!
+		Write $C(9,9),"var ret = ",..HyperEventCall("%ZEN.Controller.InvokeClassMethod","object._serverClass,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",0)
+	 	Write ";",!
+	 	Write $C(9,9),"return zenConvertType(rettype,ret);",!
+		Write $C(9),"} else {",!
+		Write $C(9,9),"if (!zenSynchronousMode) {",!
+		Write $C(9,9,9),..HyperEventCall("%ZEN.Controller.InvokeClassMethod","object._serverClass,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",1)
+	 	Write ";",!
+		Write $C(9,9),"} else {",!
+		Write $C(9,9,9),..HyperEventCall("%ZEN.Controller.InvokeClassMethod","object._serverClass,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",0)
+	 	Write ";",!
+		Write $C(9,9),"}",!
+		Write $C(9),"}",!
+	}
+	Write "}",!
+
+	#; invokeServerInstanceMethod
+	#; JS object, method name, formal spec, arguments
+	Write "function zenInstanceMethod(object,method,spec,rettype,args)",!
+	Write "{",!
+	Write $C(9),"var state = new zenSerialState();",!
+	Write $C(9),"state.addObject(object);",!
+	Write $C(9),"var arglist = zenBuildArgumentList(state,spec,args);",!
+	Write $C(9),"if (zenDEBUGTraceEvents) { zenTRACE('Server Instance Method',method,arglist);}",!
+	Write $C(9),"var header = state.getHeader();",!
+	Write $C(9),"var body = state.getBody();",!
+	Write $C(9),"var ns = '",$ZU(5),"';",!
+	If 'useAsync {
+		Write $C(9),"var ret = ",..HyperEventCall("p6.zen.Controller.InvokeInstanceMethod","object.index,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",0)
+	 	Write ";",!
+	 	Write $C(9),"return zenConvertType(rettype,ret);",!
+	}
+	Else {
+		Write $C(9),"if (''!=rettype) {",!
+		Write $C(9,9),"var ret = ",..HyperEventCall("p6.zen.Controller.InvokeInstanceMethod","object.index,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",0)
+	 	Write ";",!
+	 	Write $C(9,9),"return zenConvertType(rettype,ret);",!
+		Write $C(9),"} else {",!
+		Write $C(9,9),"if (!zenSynchronousMode) {",!
+		Write $C(9,9,9),..HyperEventCall("p6.zen.Controller.InvokeInstanceMethod","object.index,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",1)
+	 	Write ";",!
+		Write $C(9,9),"} else {",!
+		Write $C(9,9,9),..HyperEventCall("p6.zen.Controller.InvokeInstanceMethod","object.index,method,rettype,zenSyncFlag,header,body,spec,arglist,ns",0)
+	 	Write ";",!
+		Write $C(9,9),"}",!
+		Write $C(9),"}",!
+	}
+	Write "}",!
+
+
+	#; DisplayError(sc)
+	Write "function DisplayError(sc)",!
+	Write "{",!
+	Write $C(9),"alert(",..HyperEventCall("p6.CspMethods.StatusForAlert","sc",0),");",!
+	Write "}",!
+	
+	Write "p6ApplicationUrl=",..QuoteJS($e(%request.Application,1,$l(%request.Application)-1)),!
+
+	Write "</script>"
+
+	&html<<script language="javascript" src="#(%request.Application)#/p6/js/p6Utils.js"></script>>
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="onloadHandler">
+<Description>
+This client event, if present, is fired when the page is loaded.</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[	return SetFocusOnFirstControl();
+]]></Implementation>
+</Method>
+
+<Method name="OnPreHyperEvent">
+<Description>
+Init Session before Hyperevent</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>class:%String,method:%String</FormalSpec>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	set sc=##super(class,method)
+	if $data(%session.Data("SessionId")) set Session=##class(admin.Session).%OpenId(%session.Data("SessionId"))
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="OnPostHyperEvent">
+<Description>
+Drop Session after Hyperevent</Description>
+<ClassMethod>1</ClassMethod>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	Do ##super()
+	kill Session
+]]></Implementation>
+</Method>
+
+<Method name="OnPostHTTP">
+<Description>
+Drop Session after HTTP</Description>
+<ClassMethod>1</ClassMethod>
+<PublicList>Session</PublicList>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	Do ##super()
+	kill Session
+]]></Implementation>
+</Method>
+
+<Method name="%OnBeforeCreatePage">
+<ClassMethod>1</ClassMethod>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if $data(%session.Data("SessionId")) {
+		set Session=##class(admin.Session).%OpenId(%session.Data("SessionId"))
+	} elseif (..%ClassName(1)'="zui.admin.Login") {
+		set %response.Redirect="zui.admin.Login.cls?RedirectTo="_..%ClassName(1)_".cls"
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="getValue">
+<Description>
+This client event, if present, is fired when the page is loaded.</Description>
+<FormalSpec>componentId</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	try {
+		return zenPage.getComponentById(componentId).value;
+	} catch(e) {
+		return ""
+	}
+]]></Implementation>
+</Method>
+</Class>
+</Export>

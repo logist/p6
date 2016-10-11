@@ -1,0 +1,12 @@
+body { background-color: #FFFFFF; font-family: "MS Sans Serif"; font-size: "9pt"; }
+
+BODY {scrollbar-face-color:#4E6D90;
+ scrollbar-shadow-color:#FFFFFF; scrollbar-highlight-color:#FFFFFF;
+ scrollbar-3dlight-color:#4E6D90;
+ scrollbar-darkshadow-color:#4E6D90;
+ scrollbar-track-color:#FCFCFC;
+ scrollbar-arrow-color:#FFFFFF;}
+
+@media print {
+   button {display: none;}
+}

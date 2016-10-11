@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-04 13:28:21">
+<Class name="p6.unit.TestResults">
+<Description>
+Результаты тестирования</Description>
+<Super>%Persistent</Super>
+<TimeCreated>60780,39240.534083</TimeCreated>
+
+<Property name="ExecuteTs">
+<Description>
+Дата, время запуска тестов</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="BeginTs">
+<Description>
+Начало запуска конкретного теста</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="EndTs">
+<Description>
+Окончание запуска конкретного теста</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="TestQty">
+<Description>
+Всего запущено</Description>
+<Type>%Integer</Type>
+</Property>
+
+<Property name="FailedQty">
+<Description>
+Количество ошибок</Description>
+<Type>%Integer</Type>
+</Property>
+
+<Property name="SuiteName">
+<Description>
+Название набора</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="ClassName">
+<Description>
+Название класса</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="MethodName">
+<Description>
+Название метода</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="AssertNo">
+<Description>
+Номер проверки</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="Message">
+<Description>
+Сообщение</Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="10000"/>
+</Property>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^p6.unit.TestResultsD</DataLocation>
+<DefaultData>TestResultsDefaultData</DefaultData>
+<IdLocation>^p6.unit.TestResultsD</IdLocation>
+<IndexLocation>^p6.unit.TestResultsI</IndexLocation>
+<StreamLocation>^p6.unit.TestResultsS</StreamLocation>
+<Data name="TestResultsDefaultData">
+<Structure>listnode</Structure>
+<Subscript/>
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>AssertNo</Value>
+</Value>
+<Value name="3">
+<Value>BeginTs</Value>
+</Value>
+<Value name="4">
+<Value>ClassName</Value>
+</Value>
+<Value name="5">
+<Value>EndTs</Value>
+</Value>
+<Value name="6">
+<Value>ExecuteTs</Value>
+</Value>
+<Value name="7">
+<Value>FailedQty</Value>
+</Value>
+<Value name="8">
+<Value>Message</Value>
+</Value>
+<Value name="9">
+<Value>MethodName</Value>
+</Value>
+<Value name="10">
+<Value>SuiteName</Value>
+</Value>
+<Value name="11">
+<Value>TotalQty</Value>
+</Value>
+<Value name="12">
+<Value>TestQty</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

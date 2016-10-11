@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.calendar">
+<Description>
+Calendar</Description>
+<Super>%ZEN.Component.dateText</Super>
+<TimeCreated>60862,83874.778949</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<XData name="Style">
+<Data><![CDATA[
+<style type="text/css">
+input.comboboxInput, .comboboxImgButton {
+	margin-top:0.2em;
+	margin-bottom:0.2em;
+}
+</style>
+]]></Data>
+</XData>
+
+<Method name="%OnAddToPageAfter">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if ..label="" {
+		set form=..%GetForm()
+		set className=form.%controller.modelClass
+		set ..label=##class(p6.ClassDefinition).GetPropertyCaption(className,..dataBinding)
+	}
+	if ..id="" {
+		set ..id=$tr(..dataBinding,"%.()","____")
+	}
+	if ..name="" {
+		set ..name=..id
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ondatechangeHandler">
+<Description>
+onchange handler for this component.</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+
+	var ctrl = this.findElement('control');
+	zenASSERT(ctrl,'Unable to find input element',arguments);
+
+	// parse date entered by user:
+	var v = this.NormalizeDate(ctrl.value);
+	ctrl.value = ((ctrl.value!="")&&(v=="")) ? this.invalidDateMessage : v;
+
+	// notify
+	this.onchangeHandler();
+]]></Implementation>
+</Method>
+
+<Method name="applyDate">
+<Description>
+Apply the value from the popup to the input control, with normalization</Description>
+<FormalSpec>group</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var value = group.getValue();
+	value=this.NormalizeDate(value);
+	var oldval = this.value;
+
+	// update control
+	var ctrl = this.findElement('control');
+	ctrl.value = value;
+	this.value = value;
+	
+	// notify
+	if (oldval != this.value) {
+		// notify
+		this.onchangeHandler();
+	}
+]]></Implementation>
+</Method>
+
+<Method name="NormalizeDate">
+<CodeMode>expression</CodeMode>
+<FormalSpec>aDate:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[##class(p6.dt.Date).LogicalToDisplay(##class(p6.dt.Date).DisplayToLogical(aDate))
+]]></Implementation>
+</Method>
+
+<Method name="showDateSelector">
+<Description>
+Display date selector for this control.
+Almost parent code, but don't check value</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if (this.disabled || this.readOnly) return;
+
+	// get control value
+	var ctrl = this.findElement('control');
+	zenASSERT(ctrl,'Unable to find input element',arguments);
+	var value = ctrl.value;
+
+	// find position of control
+	var top,left;
+	var top = zenGetTop(ctrl) + ctrl.offsetHeight - zenGetTopScroll(ctrl);
+	var left = zenGetLeft(ctrl) - zenGetLeftScroll(ctrl);
+
+	// adjust for window scroll bars
+	top += this.window.document.body.scrollTop;
+	left += this.window.document.body.scrollLeft;
+
+	var group = zenPage.createComponent('modalGroup');
+	group.setProperty('onaction','zenPage.getComponent('+this.index+').applyDate(group);');
+
+	// additional parameters for calendar
+	var calParms = new Object();
+	calParms['firstDayOfWeek']="1";
+	if ('' != this.minDate) {
+		var minD = zenParseDate(this.minDate);
+		if (-1 != minD) {
+			var year = parseInt(minD.substr(0,4),10);
+			calParms['minDate'] = this.minDate;
+			calParms['startYear'] = year;
+		}
+	}
+	if ('' != this.maxDate) {
+		var maxD = zenParseDate(this.maxDate);
+		if (-1 != maxD) {
+			var year = parseInt(maxD.substr(0,4),10);
+			calParms['maxDate'] = this.maxDate;
+			calParms['endYear'] = year;
+		}
+	}
+
+	if (1) {
+		// missing value, show current month
+		var now = new Date();
+		calParms['year'] = now.getFullYear();
+		calParms['month'] = now.getMonth() + 1;
+	}
+
+	if (this.showTime) {
+		calParms['showTime'] = this.showTime;
+	}
+
+	// invoke callback
+	zenInvokeCallbackMethod(this.onshowPopup,this,'onshowPopup','settings',calParms);
+
+	// show the calendar
+	group.show('','calendar',value,top,left,null,null,calParms);
+]]></Implementation>
+</Method>
+
+<Method name="isValid">
+<Description><![CDATA[
+This method is called by the form validation mechanism to test
+if the current contents of this control are valid.<br>
+I only test if date normalization goes OK]]></Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var ctrl = this.findElement('control');
+	zenASSERT(ctrl,'Unable to find input element',arguments);
+
+	// parse date entered by user:
+	var v = this.NormalizeDate(ctrl.value);
+	return !((ctrl.value!="")&&(v==""))
+]]></Implementation>
+</Method>
+</Class>
+</Export>

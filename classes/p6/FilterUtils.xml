@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.FilterUtils">
+<ClassType/>
+<ProcedureBlock>0</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>59071,68811</TimeCreated>
+
+<Method name="FormCrossPeriodsCondition">
+<Description><![CDATA[
+возвращает: (toFieldName>=fromDate) and (fromFieldName<=toDate)]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fromFieldName,toFieldName,fromDate,toDate</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (fromDate = "") {
+ 	if (toDate]"") quit fromFieldName_"<="_toDate
+ 	quit ""
+ }
+ else  {
+ 	if (toDate = "") quit toFieldName_">="_fromDate
+ 	quit "("_toFieldName_">="_fromDate_") and ("_fromFieldName_"<="_toDate_")"
+ }
+]]></Implementation>
+</Method>
+
+<Method name="FormIncludePeriodsCondition">
+<Description><![CDATA[
+возвращает: (fromFieldName>=fromDate) and (toFieldName<=toDate)]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fromFieldName,toFieldName,fromDate,toDate</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (fromDate = "") {
+ 	if (toDate]"") quit toFieldName_"<="_toDate
+ 	quit ""
+ }
+ else {
+ 	if (toDate = "") quit fromFieldName_">="_fromDate
+ 	quit "("_fromFieldName_">="_fromDate_") and ("_toFieldName_"<="_toDate_")"
+ }
+]]></Implementation>
+</Method>
+
+<Method name="FormPeriodCondition">
+<Description><![CDATA[
+возвращает: (FieldName>=fromDate) and (FieldName<=toDate)]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fieldName,fromDate,toDate</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (fromDate = "") {
+ 	if (toDate]"") quit fieldName_"<="_toDate
+ 	quit ""
+ }
+ else  {
+ 	if (toDate = "") quit fieldName_">="_fromDate
+ 	quit "("_fieldName_">="_fromDate_") and ("_fieldName_"<="_toDate_")"
+ }
+]]></Implementation>
+</Method>
+
+<Method name="FormPeriodConditionSql">
+<Description><![CDATA[
+Возвращает: (FieldName>=todate('04/10/2005','MM/DD/YYYY')) 
+            and (FieldName<=todate('07/19/2005','MM/DD/YYYY'))]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fieldName="",fromDate="",toDate=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ 
+ quit ..FormPeriodCondition(fieldName,##class(p6.Convert).SqlDate(fromDate),##class(p6.Convert).SqlDate(toDate))
+]]></Implementation>
+</Method>
+
+<Method name="Add">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>wholeFilter,newCondition</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (newCondition = "") quit wholeFilter
+ if (wholeFilter]"") set wholeFilter = "("_wholeFilter_") and ("_newCondition_")"
+ else  set wholeFilter = newCondition
+ quit wholeFilter
+]]></Implementation>
+</Method>
+
+<Method name="IsIdInList">
+<Description>
+aIdList - разделитель запятая, напр. ",5,15,555,"</Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec>aId,aIdList</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<SqlProc>1</SqlProc>
+<Implementation><![CDATA[aIdList[(","_aId_",")
+]]></Implementation>
+</Method>
+</Class>
+</Export>

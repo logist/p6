@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.Persistent">
+<Description>
+абстрактный для порождения всех классов Dimas </Description>
+<Abstract>1</Abstract>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Library.Persistent,p6.zen.DataModel</Super>
+<TimeCreated>59070,58326</TimeCreated>
+
+<Parameter name="PROPERTYVALIDATION">
+<Default>2</Default>
+</Parameter>
+
+<Parameter name="LOGDETALISATION">
+<Description>
+Детализация логов по объекту: 1-вести дату и пользователя,
+    0-не вести протокол</Description>
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="LOGDETALISATIONWITHSTATE">
+<Description>
+Детализация логов по объекту: 1- сохранять в логе помимо даты
+ и пользователя состояние объекта после изменения (select * )
+//     0-не сохранять в логе данное поле</Description>
+<Default>0</Default>
+</Parameter>
+
+<Method name="GetCaption">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[ quit ..#CAPTION
+]]></Implementation>
+</Method>
+
+<Method name="Save">
+<PublicList>NewObject,canSave,Session</PublicList>
+<ReturnType>%Library.Status</ReturnType>
+<Implementation><![CDATA[
+   set $ztrap="ExceptionProcessing1"
+
+   set NewObject = "" //признак изменение-M / новый-N
+   // начинаем транзакцию
+   TSTART
+   // проводим валидацию объекта
+   set sc = ..%ValidateObject()
+   if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+   // вызываем свой OnBeforeSave()
+   set sc = ..OnBeforeSave()
+   if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+   // сохраняем объект, автоматом вызовутся %OnBeforeSave() и %OnAfterSave()
+   set sc = ..%Save()
+   if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+   // вызываем свой OnAfterSave()
+   set sc = ..OnAfterSave()
+   if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+   // протокол изменений NewObject = N, M
+   if ..#LOGDETALISATION do ##class(admin.LogObject).Put(##this,$get(NewObject))
+   // подтверждаем завершение транзакции
+   TCOMMIT
+   quit $$$OK
+
+ExceptionProcessing1
+   set errCode=$ZE
+   TROLLBACK
+   quit $$$ERROR(10000,##class(p6.ClassUtils).GetTransactionErrorMessage("Save",errCode))
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeSave">
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterSave">
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnBeforeSave">
+<FormalSpec>Insert:p6.dt.Boolean</FormalSpec>
+<Private>1</Private>
+<PublicList>NewObject,canSave,Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ set NewObject = $select(Insert:"N",1:"M") // новый или модификация
+ // if ('$data(canSave)) quit $$$ERROR(10000, "Нельзя сохранить объект напрямую через метод %Save(). Необходимо использовать метод Save().")
+ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnAfterSave">
+<FormalSpec>Insert:p6.dt.Boolean</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ // if ('$data(canSave)) quit $$$ERROR(10000, "Нельзя сохранить объект напрямую через метод %Save(). Необходимо использовать метод Save().")
+ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="DeleteId">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%Library.String</FormalSpec>
+<PublicList>NewObject,canSave,Session</PublicList>
+<ReturnType>%Library.Status</ReturnType>
+<Implementation><![CDATA[
+ set $ztrap="ExceptionProcessing2"
+ // начинаем транзакцию
+ TSTART
+
+ // узнаем имя класса удаляемого объекта
+ set tempObj = ..%New()
+ set className = tempObj.%ClassName(1)
+ do tempObj.%Close()
+ // вызываем свой OnBeforeDelete()
+ set sc = ..OnBeforeDelete(id)
+ if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+ // удаляем объект, автоматом вызовется %OnDelete()
+ set sc = ..%DeleteId(id)
+ if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+ // вызываем свой OnAfterDelete()
+ set sc = ..OnAfterDelete(id)
+ if ($$$ISERR(sc)) { TROLLBACK  quit sc }
+ // протокол удаления объекта
+ do ##class(admin.LogObject).PutId(className,id,"D")
+ // подтверждаем завершение транзакции
+ TCOMMIT
+ quit $$$OK
+
+
+ExceptionProcessing2
+ set errCode=$ZE
+ TROLLBACK
+ quit $$$ERROR(10000,##class(p6.ClassUtils).GetTransactionErrorMessage("DeleteId",errCode))
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeDelete">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%String</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterDelete">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%String</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnValidateObject">
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnNew">
+<FormalSpec>Param:%CacheString=""</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnOpen">
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

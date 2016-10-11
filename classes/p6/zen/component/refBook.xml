@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.refBook">
+<Description>
+This is a reference book component. Refernce book consists of buttons,
+navigator and table pane.</Description>
+<Super>%ZEN.Component.composite</Super>
+<TimeCreated>60855,55012.038342</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Property name="className">
+<Description>
+Class name of refbook</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="windowType">
+<Description>
+Type of generated refbook. Values are "Open","Modal". </Description>
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>"Open"</InitialExpression>
+<Parameter name="VALUELIST" value=",Open,Modal"/>
+</Property>
+
+<Property name="columns">
+<Description>
+Columns of refbook. You may state all coumns here comma separated.
+Format: field_name:caption:slice:align. Field name required.</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="where">
+<Description>
+Additional where clause</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="urlParam">
+<Description>
+Additional URL parameters</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="showNavigator">
+<Description>
+Show navigator bar on table</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>1</InitialExpression>
+</Property>
+
+<Property name="btNew">
+<Description>
+New button</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="btEdit">
+<Description>
+Edit button</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="btDelete">
+<Description>
+Delete button</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="btReturn">
+<Description>
+Select button</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="btClose">
+<Description>
+Close button</Description>
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>"-"</InitialExpression>
+</Property>
+
+<Property name="btPrintWord">
+<Description>
+Print to Word</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="btPrintExcel">
+<Description>
+Print to Excel</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<XData name="Style">
+<Description>
+This Style block contains page-specific CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+input.btNew {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/new.gif');
+}
+
+input.btReturn {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/return.gif');
+}
+
+input.btEdit {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/edit.gif');
+}
+input.btDelete {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/delete.gif');
+}
+input.btClose {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/exit.gif');
+}
+
+input.btPrintWord {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/Word.gif');
+}
+
+input.btPrintExcel {
+	width: 35px; height: 25px; background-color: #9DB9C8;
+	background-position:center center;
+	background-repeat:no-repeat;
+	background-image:url('#(%request.Application)#/p6/images/buttons/Excel.gif');
+}
+</style>
+]]></Data>
+</XData>
+
+<XData name="Contents">
+<Description>
+This XML block defines the contents of this page.</Description>
+<XMLNamespace>http://www.intersystems.com/zen</XMLNamespace>
+<Data><![CDATA[
+<composite xmlns="http://www.intersystems.com/zen">
+<hgroup id="buttons" align="center" containerStyle="padding-bottom:0.3em;">
+</hgroup>
+</composite>
+]]></Data>
+</XData>
+
+<Method name="%OnAfterCreateComposite">
+<Description>
+Make our refbook</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	for n=1:1:..children.Count() {
+		set Component = ..children.GetAt(n)
+		if Component.%IsA("%ZEN.Component.tablePane") set Table=Component
+	}
+	if $get(Table)=$$$NULLOREF {
+		set Table=##class(p6.zen.component.tablePane).%New()
+	} else {
+		do ..%RemoveChild(Table)
+		set Table.index=""
+	}
+	set Table.id="table"
+	do ..%AddChild(Table)
+
+	do ..ProcessColumns()
+	do ..ProcessWhere()
+	set Table.hasFocus=1
+	set Table.tableName=..className
+	set Table.ondblclick="zenPage.getComponent("_..index_").OnDblClick()"
+	set Table.onkeypress="return zenPage.getComponent("_..index_").OnKeypress(evt);"
+	
+	if ..windowType="Modal" do ..AddButton("btReturn","Выбрать запись")
+	if ..btNew'="-" do ..AddButton("btNew", "Создать запись")
+	if ..btEdit'="-" do ..AddButton("btEdit", "Редактировать запись")
+	if ..btDelete'="-" do ..AddButton("btDelete", "Удалить запись")
+	if ..btPrintWord'="-" do ..AddButton("btPrintWord", "Выгрузить в текстовый редактор")
+	if ..btPrintExcel'="-" do ..AddButton("btPrintExcel", "Выгрузить в таблицу")
+	if ..btClose'="-" do ..AddButton("btClose", "Закрыть окно")
+	
+	if ..showNavigator {
+		set Navigator=##class(%ZEN.Component.tableNavigatorBar).%New()
+		set Navigator.id="navigator"
+		set Navigator.containerStyle="padding:0.3em;"
+		set Navigator.tablePaneId=Table.id
+		set Navigator.showPageSize=1
+
+		set ButtonsGroup=..%GetChildById("buttons")
+		do ButtonsGroup.%AddChild(Navigator)
+	}
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ProcessColumns">
+<Description>
+Process columns</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set Table=..%GetChildById("table")
+	
+	set isIdFound=0
+
+	if Table.columns.Count()>0 {
+		for i=1:1:Table.columns.Count() {
+			if Table.columns.GetAt(i).colName="ID" set isIdFound=1
+		}
+	} else {
+
+		set oldPage=%page
+		kill %page
+		set newRefBook=$zobjclassmethod(..className,"CreateRefBook")
+		set NewTable=newRefBook.children.GetAt(1)
+		set ..btNew=newRefBook.btNew
+		set ..btEdit=newRefBook.btEdit
+		set ..btDelete=newRefBook.btDelete
+		if newRefBook.btClose'="-" set ..btClose=newRefBook.btClose
+		set ..btPrintWord=newRefBook.btPrintWord
+		set ..btPrintExcel=newRefBook.btPrintExcel
+		set %page=oldPage
+		
+		set id=Table.id,index=Table.index,parent=Table.parent
+		do ##class(p6.ClassUtils).CopyProperties(Table,NewTable,NewTable.%ClassName(1))
+		set Table.id=id,Table.index=index,Table.parent=parent,Table.columns=""
+
+		for i=1:1:NewTable.columns.Count() {
+			#dim Column As p6.zen.auxiliary.column
+			set Column=##class(p6.zen.auxiliary.column).%New()
+			do ##class(p6.ClassUtils).CopyProperties(Column,NewTable.columns.GetAt(i),"p6.zen.auxiliary.column")
+			do Table.%AddColumn(Column)
+			if Column.colName="ID" set isIdFound=1
+		}
+	
+		for i=1:1:NewTable.conditions.Count() {
+			#dim Condition As %ZEN.Auxiliary.condition
+			set Condition=##class(%ZEN.Auxiliary.condition).%New()
+			do ##class(p6.ClassUtils).CopyProperties(Condition,NewTable.conditions.GetAt(i),"%ZEN.Auxiliary.condition")
+			do Table.conditions.Insert(Condition)
+			Do:$IsObject(%page) %page.%AddComponent(Condition)
+		}
+	}
+
+	if 'isIdFound {
+		set Column=##class(p6.zen.auxiliary.column).%New()
+		set Column.colName="ID"
+		set Column.hidden=1
+		do Table.%AddColumn(Column)
+	}
+	
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ProcessWhere">
+<Description>
+Process SQL where filter</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ..%GetChildById("table").whereClause=..where
+
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ProcessDelete">
+<Description>
+Really delete object</Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec>aClassName,aId</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[$zobjclassmethod(aClassName,"%OnDeleteSource",aId)
+]]></Implementation>
+</Method>
+
+<Method name="AddButton">
+<FormalSpec>aButtonName:%String,aTitle:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ButtonsGroup=..%GetChildById("buttons")
+	
+	set Button=##class(%ZEN.Component.button).%New()
+	set Button.id=aButtonName
+	set Button.controlClass=aButtonName
+	set Button.onclick="zenPage.getComponent("_..index_")."_aButtonName_"Handler()"
+	set Button.containerStyle="padding-right:0.3em;"
+	set Button.title=aTitle
+	do ButtonsGroup.%AddChild(Button)
+	
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnKeypress">
+<FormalSpec>evt</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	evt = evt ? evt : window.event;
+	if (evt.type!="keydown") return false;
+	
+	// trap keys
+	switch(evt.keyCode) {
+	case zenENTER: {
+
+		this.btEditHandler();
+		return false;}
+		break;
+	}
+	return true;
+]]></Implementation>
+</Method>
+
+<Method name="onloadHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[	this.getChildById("table").selectRow(0,false);
+]]></Implementation>
+</Method>
+
+<Method name="btEditHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(this.btEdit!='') {
+		eval(this.btEdit);
+		return
+	}
+	if(this.getChildById("table").value!='') {
+		zenLaunchPopupWindow("zui."+this.className+".cls?Id="+this.getChildById("table").value+"&"+eval(this.urlParam),'edit'+this.index,GetWindowFeatures(),null,this);
+	}
+]]></Implementation>
+</Method>
+
+<Method name="OnDblClick">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if (this.windowType=="Modal") {
+		if(this.getProperty("btReturn")!="-") this.btReturnHandler();
+	} else {
+		if(this.btEdit!='-')
+		{
+		this.btEditHandler();
+		}else {
+			if(this.btReturn!='-') this.btReturnHandler();
+		}
+	}
+]]></Implementation>
+</Method>
+
+<Method name="btNewHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(this.btNew!='') {
+		eval(this.btNew);
+		return
+	}
+	zenLaunchPopupWindow("zui."+this.className+".cls?Id=&"+eval(this.urlParam),'edit'+this.index,GetWindowFeatures(),null,this);
+]]></Implementation>
+</Method>
+
+<Method name="btDeleteHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(this.btDelete!='') {
+		eval(this.btDelete);
+		return
+	}
+	if (confirm("Вы действительно хотите удалить эту запись?")) {
+		sc=this.ProcessDelete(this.className,this.getChildById("table").value);
+		if (sc!=1) DisplayError(sc);
+		this.getChildById("table").executeQuery(true);
+	}
+]]></Implementation>
+</Method>
+
+<Method name="btReturnHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(this.btReturn!='') {
+		eval(this.btReturn);
+		return;
+	}
+	if (zenPage.isPopup) {
+		zenPage.firePopupAction('ok',this.getChildById("table").value);
+	} else {
+		history.back();
+	}
+]]></Implementation>
+</Method>
+
+<Method name="btCloseHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(this.btClose!='') {
+		eval(this.btClose);
+		return
+	}
+	CloseWindow();
+]]></Implementation>
+</Method>
+
+<Method name="btPrintWordHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[	this.getChildById("table").printIt("1",zenPage.title);
+]]></Implementation>
+</Method>
+
+<Method name="btPrintExcelHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[	this.getChildById("table").printIt("2",zenPage.title);
+]]></Implementation>
+</Method>
+
+<Method name="onPopupAction">
+<FormalSpec>popupName,action,value</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(action=="close") return;
+	this.getChildById("table").executeQuery(true);
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-04 13:28:20">
+<Class name="p6.unit.listener.Abstract">
+<Description>
+Абстрактный слушатель тестов</Description>
+<Abstract>1</Abstract>
+<Super>%RegisteredObject</Super>
+<TimeCreated>60780,39926.391562</TimeCreated>
+
+<Method name="OnBegin">
+<FormalSpec>aSuite,aClass,aMethod</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnEnd">
+<FormalSpec>aSuite,aClass,aMethod</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnSuccess">
+<FormalSpec>aSuite,aClass,aMethod,aMessage</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnFail">
+<FormalSpec>aSuite,aClass,aMethod,aMessage</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

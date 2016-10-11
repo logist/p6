@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.csp.Generator">
+<Description>
+Csp-генератор</Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>59823,43120.126834</TimeCreated>
+
+<Method name="RunFromCsp">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	&js<pageText.value=#(##class(%CSP.Page).QuoteJS(..GetPage(aClassName)))#;>
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="GetPage">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  set CR=$C(13,10)
+  set (page,table,refBooks)=""
+  
+  set ClassDef=##class(%Dictionary.CompiledClass).%OpenId(aClassName)
+  set classDescr=$p(ClassDef.Description,$c(13),1)
+  set objName=$piece(aClassName,".",$length(aClassName,"."))
+  for i=1:1:ClassDef.Properties.Count() {
+    set Prop=ClassDef.Properties.GetAt(i)
+    set PropSort(Prop.SequenceNumber)=Prop
+  }
+
+  for i=1:1:ClassDef.Properties.Count() {
+	  set Prop=$get(PropSort(i))
+	  if Prop="" continue
+	  if Prop.Name["%" continue
+	  if Prop.Private continue
+	  //if "~csp~csr~p6."[$e(Prop.Name,1,3) continue
+	  
+	  set propDescr=$p(Prop.Description,$c(13),1)
+      if propDescr="" set propDescr=Prop.Parameters.GetAt("CAPTION")
+	  if propDescr="" set propDescr=Prop.Name
+	  
+	  set propInput=..GetPropertyInput(objName,Prop)
+	  
+	  if ##class(%Dictionary.CompiledClass).%OpenId(Prop.Type).ClassType="persistent" {
+		  set refBooks=refBooks_"   <script src=""#(p6ApplicationUrl)#/js/refbooks/"_$tr(Prop.Type,".","/")_".js""></script>"_CR
+	  }
+	  
+	  set table=table_"  <tr>"_CR
+	  set table=table_"    <td>"_propDescr_"</td>"_CR
+	  set table=table_"    <td>"_CR
+	  set table=table_"      "_propInput_CR
+	  set table=table_"    </td>"_CR
+	  set table=table_"  </tr>"_CR
+  }
+  
+  set page=page_"<html>"_CR
+  set page=page_"<head>"_CR
+  set page=page_"   <title>"_classDescr_"</title>"_CR
+  set page=page_"   <p6:head><p6:css><p6:focus>"_CR
+  set page=page_"   <p6:JavaScriptObject>"_CR
+  set page=page_"   <p6:sessionPreservePage value=""1"">"_CR
+  set page=page_"   <SCRIPT LANGUAGE=JavaScript> function broker() { #server(p6.broker(""для аплета""))#; } </SCRIPT>"_CR
+  set page=page_"   <admin:SessionOpen>"_CR
+  set page=page_refBooks
+  set page=page_"</head>"_CR
+  set page=page_CR_CR
+  set page=page_"<body>"_CR
+  set page=page_"<p6:request elements=""Id,EditMode"">"_CR
+  set page=page_"<p6:object objectName="""_objName_""" className="""_aClassName_"""  value='#(Id)#'> "_CR
+  set page=page_"<p6:Calendar>"_CR
+  set page=page_CR_CR
+  set page=page_"<center><font size=+2><b>"_classDescr_"</b></font></center>"_CR
+  set page=page_"<table cellpadding=""4"" cellspacing=""0"" width=""100%"" border=""1"">"_CR
+  set page=page_table
+  set page=page_"</table>"_CR
+  set page=page_CR
+  set page=page_"<br>"_CR
+  set page=page_"<!-- Кнопки. --> "_CR
+  set page=page_"<center> <p6:buttonsEdit objectName="""_objName_"""> </center>"_CR
+  set page=page_CR_CR
+  set page=page_"</body>"_CR
+  set page=page_"</html>"_CR
+  quit page
+]]></Implementation>
+</Method>
+
+<Method name="GetPropertyInput">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aObjName:%String,AProp:%Dictionary.CompiledProperty</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	set input=""
+	
+	if ##class(%Dictionary.CompiledClass).%OpenId(AProp.Type).ClassType="persistent" {
+		set input="<input localname="""_aObjName_"."_AProp.Name_""" p6refbook=""refBook"_$tr(AProp.Type,".","_")_"()"" style=""width=80%"">"
+	}
+	
+	if AProp.Type="%Library.Boolean" set input="<input localname="""_aObjName_"."_AProp.Name_""" type=""checkbox"">"
+	if AProp.Type="p6.dt.Date" set input="<input localname="""_aObjName_"."_AProp.Name_""" p6Calendar>"
+	if input="" set input="<input localname="""_aObjName_"."_AProp.Name_""" size=""30"">"
+	quit input
+]]></Implementation>
+</Method>
+</Class>
+</Export>

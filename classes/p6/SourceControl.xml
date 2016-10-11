@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21" zv="Cache for Windows (x86-32) 2007.1.1 (Build 420)" ts="2007-10-22 15:53:39">
+<Class name="p6.SourceControl">
+<Description>
+Организация работы с MS VSSDB 
+Dimas 2003, logist, shu 031018 - cache 5.04 - добавлены параметры в методы</Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Studio.SourceControl.Base</Super>
+<TimeCreated>59078,62120</TimeCreated>
+
+<XData name="Menu">
+<Data><![CDATA[
+<MenuBase>
+ <Menu Name="p&amp;5" Type="0">
+ <MenuItem Name="&amp;1 - Go to class" Enabled="1"/>
+ <MenuItem Name="&amp;2 - Go to page" Enabled="1"/>
+ <MenuItem Name="&amp;3 - Go to test" Enabled="1"/>
+ <MenuItem Name="&amp;4 - Run test" Enabled="1"/>
+ </Menu>
+ </MenuBase>
+]]></Data>
+</XData>
+
+<Method name="UserAction">
+<FormalSpec><![CDATA[Type:%Integer,Name:%String,InternalName:%String,SelectedText:%String,&Action:%String,&Target:%String,&Msg:%String,&Reload:%Boolean]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	// Выделяем название класса из пришедшего названия файла
+	set className="undefined"
+	if InternalName[".CLS" {
+		set className=$extract(InternalName,1,$l(InternalName)-4)
+		if '((Type=0) && (Name="p&5,&4 - Run test")) {
+			if $e(className,1,4)="zui." set $e(className,1,4)=""
+			if $e(className,1,4)="src." set $e(className,1,4)=""
+		}
+	} elseif $ZCVT(InternalName,"U")[".CSP" {
+		set className=$extract(InternalName,1,$l(InternalName)-4)
+		set className=$piece(className,"/",4,999)
+		set className=$translate(className,"/",".")
+	}
+	if (Type=0) && (Name="p&5,&1 - Go to class") {
+		set Action=5,Target=className_".CLS",Reload=0
+	} elseif (Type=0) && (Name="p&5,&2 - Go to page") {
+		set Action=5,Target="zui."_className_".CLS",Reload=0
+	} elseif (Type=0) && (Name="p&5,&3 - Go to test") {
+		if ##class(%Dictionary.CompiledClass).%ExistsId("test."_className) {
+			set Action=5,Target="test."_className_".CLS",Reload=0
+		} elseif ##class(%Dictionary.CompiledClass).%ExistsId("src."_className) {
+			set Action=5,Target="src."_className_".CLS",Reload=0
+		}
+	} elseif (Type=0) && (Name="p&5,&4 - Run test") {
+		do ..CreateTestScript(className)
+		set Action=3,Target="C:\test.bat",Reload=0
+	} else {
+		Set Action=0,Target="",Reload=0
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="Login">
+<Description><![CDATA[
+The username of this source control user.
+This just calls the <method>Login</method> to perform an initialisation.
+Note that you must call <method>SourceControlCreate</method> to create an instance
+of the source control class, do not call %New directly.   
+Perform any login step here.]]></Description>
+<FormalSpec>Name:%String,Password:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeLoad">
+<Description>
+Import the file from the external format into Cache.
+This is called before the actual load of data to give the chance
+to load the item from an external format.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set filename=..ExternalName(InternalName)
+ If filename="" Quit $$$OK
+ #; If no file then skip the import
+ If ($zu(140,1,filename)<0) { 
+ 	Write:'$get(^ClearCase("nodisplay")) !,"File ",filename," not found, skipping import" 
+ 	Quit $$$OK
+ }
+ If ($zu(140,2,filename)=$get(^ClearCase(0,"FileTimeStamp",InternalName))) {
+	 Write:'$get(^ClearCase("nodisplay")) !,"File ",filename," is up to date, skipping import" 
+	 Quit $$$OK
+ }
+ Set name=$Piece(InternalName,".",1,$Length(InternalName,".")-1)
+ Set ext=$ZConvert($Piece(InternalName,".",$Length(InternalName,".")),"U")
+ If ( (ext="CLS") || (ext="MAC") || (ext="PRJ") ) {
+ 	Set sc=$$Import^%occSAX(filename,"-d-l")
+ } Else {
+ 	Set sc=$$Import^%apiRTN(filename,"all,replace,nocompile,lock=0",,,,"-d")
+ }
+ If ($$$ISOK(sc)) {
+ 	Write:'$get(^ClearCase("nodisplay")) !,"Imported '",InternalName,"' from file '",filename,"'"
+ 	Set ^ClearCase(0,"FileTimeStamp",InternalName)=$zu(140,2,filename)
+ } Else {
+  	do DecomposeStatus^%apiOBJ(sc,.errors)
+  	Do:'$get(^ClearCase("nodisplay"))&($g(errors(1,"code"))'=6301) DecomposeStatus^%apiOBJ(sc,.errors,"d")
+ }
+ Quit sc
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterSave">
+<Description>
+Export the routine/class/csp file to the external format.
+This is called after the item has been saved to the database.</Description>
+<FormalSpec>InternalName:%String,Object:%RegisteredObject=$$$NULLOREF</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ Set filename=..ExternalName(InternalName)
+ If filename="" Quit $$$OK
+ Set name=$Piece(InternalName,".",1,$Length(InternalName,".")-1)
+ Set ext=$ZConvert($Piece(InternalName,".",$Length(InternalName,".")),"U")
+ If ( $zu(140,1,filename)<0 ) { Do ..MakeDir(filename) }
+ If ( (ext="CLS") ) {
+ 	Set sc=$system.OBJ.Export(InternalName,filename,"/diffexport") 
+ }
+ If $$$ISOK(sc) {
+ 	Write:'$get(^ClearCase("nodisplay")) !,"Exported '",InternalName,"' to file '",filename,"'"
+ 	Set ^ClearCase(0,"FileTimeStamp",InternalName)=$zu(140,2,filename)
+ } Else {
+  	do DecomposeStatus^%apiOBJ(sc,.errors)
+  	Do:'$get(^ClearCase("nodisplay"))&($g(errors(1,"code"))'=6301) DecomposeStatus^%apiOBJ(sc,.errors,"d")
+ }
+ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeSave">
+<Description>
+Called before the item is saved to the Cache database it is passed
+a reference to the current temporary storage of this item so that it
+can be modified before the save completes. If you quit with an error
+value then it will abort the save.</Description>
+<FormalSpec>InternalName:%String,Location:%String,Object:%RegisteredObject=$$$NULLOREF</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeCompile">
+<Description>
+Called before the compile of the item is done.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterCompile">
+<Description>
+Called after the compile of the item is done.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+   Set filename=..ExternalName(InternalName)
+   If filename="" Quit $$$OK
+   Set name=$Piece(InternalName,".",1,$Length(InternalName,".")-1)
+   Set ext=$ZConvert($Piece(InternalName,".",$Length(InternalName,".")),"U")
+   If ( (ext'="CLS") ) { Quit $$$OK } //#
+	// don't export ...admin.Build...
+ 	If ( $zu(140,1,filename)<0 ) { Do ..MakeDir(filename) }
+ 	If ( (ext="CLS") ) {
+	 	Set sc=$system.OBJ.Export(InternalName,filename,"/diffexport") 
+ 	}
+   If $$$ISOK(sc) {
+      Write:'$get(^ClearCase("nodisplay")) !,"Exported '",InternalName,"' to file '",filename,"'"
+      Set ^ClearCase(0,"FileTimeStamp",InternalName)=$zu(140,2,filename)
+   } Else {
+  	do DecomposeStatus^%apiOBJ(sc,.errors)
+  	Do:'$get(^ClearCase("nodisplay"))&($g(errors(1,"code"))'=6301) DecomposeStatus^%apiOBJ(sc,.errors,"d")
+   }
+   
+   Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="CreateTestScript">
+<Description>
+Create test script on drive c:\</Description>
+<FormalSpec>aClassName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ScriptFile=##class(%File).%New("c:\test.scr")
+	do ScriptFile.Open("WSN")
+
+	do ScriptFile.WriteLine("send: zn """_$znspace_"TEST""<CR>")
+	do ScriptFile.WriteLine("send: set Manager=##class(p6.unit.Manager).%New()<CR>")
+	do ScriptFile.WriteLine("send: set Manager.Listener=##class(p6.unit.listener.Console).%New()<CR>")
+	do ScriptFile.WriteLine("send: set Manager.Reporter=##class(p6.unit.reporter.Console).%New()<CR>")
+	do ScriptFile.WriteLine("send: set Manager.Reporter.Listener=Manager.Listener<CR>")
+	do ScriptFile.WriteLine("send: set Manager.Debug=1<CR>")
+
+	do ScriptFile.WriteLine("send: set Manager.ClassList(""one"","""_aClassName_""")=""""<CR>")
+	
+	do ScriptFile.WriteLine("send: do Manager.RunClassList()<CR>")
+
+	do ScriptFile.Close()
+	
+	set config=$zu(86)
+	set configPath=$piece($piece(config,"*",1),"\",1,$length($piece(config,"*",1),"\")-1)
+	set configName=$piece(config,"*",2)
+	
+
+	set BatchFile=##class(%File).%New("c:\test.bat")
+	do BatchFile.Open("WSN")
+	do BatchFile.WriteLine(configPath_"\Bin\cterm.exe /console=cn_ap:"_configName_"[USER] c:\test.scr")
+	do BatchFile.Close()
+
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="CheckIn">
+<Description>
+Check this routine/class/csp file into source control.</Description>
+<FormalSpec>InternalName:%String,Description:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$ERROR(10000,"Работать с контролем версий можно только из VSSDB")
+]]></Implementation>
+</Method>
+
+<Method name="CheckOut">
+<Description>
+Check this routine/class/csp file out of source control.</Description>
+<FormalSpec>InternalName:%String,Description:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$ERROR(10000,"Работать с контролем версий можно только из VSSDB")
+]]></Implementation>
+</Method>
+
+<Method name="GetLatest">
+<Description>
+Get the latest version of this file from source control.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$ERROR(10000,"Работать с контролем версий можно только из VSSDB")
+]]></Implementation>
+</Method>
+
+<Method name="GetStatus">
+<Description>
+Return information about this entity.</Description>
+<FormalSpec><![CDATA[InternalName:%String,&IsInSourceControl:%Boolean,&Editable:%Boolean,&IsCheckedOut:%Boolean,&UserCheckedOut:%String]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+   Set Editable=1,IsCheckedOut=0,UserCheckedOut=""
+   Set filename=..ExternalName(InternalName)
+   Set IsInSourceControl=(filename'="")
+   If ( filename="" ) { Quit $$$OK } //#
+   If ($zu(140,1,filename)<0) { Quit $$$OK } //#
+   Open filename:"W":0 Set Editable=$T Close filename
+   If ('Editable) {
+	   Write:'$get(^ClearCase("nodisplay")) !,InternalName," locked in SourceControl"
+   }
+   Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="AddToSourceControl">
+<Description>
+Add this routine/class/csp file to source control.</Description>
+<FormalSpec>InternalName:%String,Description:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[   Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="RemoveFromSourceControl">
+<Description>
+Remove this routine/class/csp file from source control.</Description>
+<FormalSpec>InternalName:%String,Description:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[   Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="IsInSourceControl">
+<Description>
+Returns true if this item is in source control and false otherwise.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[   Quit ..ExternalName(InternalName)'=""
+]]></Implementation>
+</Method>
+
+<Method name="ExternalName">
+<Description>
+Convert the internal name, e.g. TEST.MAC to an external name that is used to export
+the routine/class/csp item. This is often a filename to write the file out to.</Description>
+<FormalSpec>InternalName:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+   Set nam=$p(InternalName,".",1,$l(InternalName,".")-1),
+   	ext=$p(InternalName,".",$l(InternalName,".")),
+   	ext=$zcvt(ext,"u")
+   If ( nam="" ) { Quit "" } //#
+   If ( ext="CLS" ) {
+      Quit "c:\VSSDB\"_$znspace_"\Classes\"_$translate(nam,".","\")_".xml"
+   } 
+   Quit ""
+]]></Implementation>
+</Method>
+
+<Method name="MakeDir">
+<FormalSpec>filename:%String</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+ Set filename=$piece(filename,"\",1,$length(filename,"\")-1)
+ If ( $zu(12,filename,2)="" ) {
+ 	For i=1:1:$length(filename,"\") Do $ZU(140,9,$piece(filename,"\",1,i))
+ }
+]]></Implementation>
+</Method>
+</Class>
+</Export>

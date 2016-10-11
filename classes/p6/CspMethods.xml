@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.CspMethods">
+<Description>
+Methods for Csp</Description>
+<Super>%Library.RegisteredObject</Super>
+<TimeCreated>59071,68810</TimeCreated>
+
+<Method name="Do">
+<Description>
+Выполнение метода класса без возвращаемого значения</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>method:%Library.String=""</FormalSpec>
+<ProcedureBlock>0</ProcedureBlock>
+<Implementation><![CDATA[
+ if method="" quit "" //#
+ xecute "do "_method
+ quit
+]]></Implementation>
+</Method>
+
+<Method name="Function">
+<Description>
+Выполнение метода класса с возвращаемым значением</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>method:%Library.String=""</FormalSpec>
+<ProcedureBlock>0</ProcedureBlock>
+<ReturnType>%Library.String</ReturnType>
+<Implementation><![CDATA[
+ if method="" quit "" //#
+ xecute "set ret = "_method
+ quit ret
+]]></Implementation>
+</Method>
+
+<Method name="Xecute">
+<Description>
+выполнение командной строки</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>command:%Library.String=""</FormalSpec>
+<ProcedureBlock>0</ProcedureBlock>
+<Implementation><![CDATA[
+ if command="" quit  //#
+ xecute command 
+ quit
+]]></Implementation>
+</Method>
+
+<Method name="ApplicationUrl">
+<Description><![CDATA[
+Определение относительной ссылки для приложения в виде
+"/csp/<application>"
+работает только внутри csp-страницы, где имеется объект %request]]></Description>
+<ClassMethod>1</ClassMethod>
+<ProcedureBlock>1</ProcedureBlock>
+<ReturnType>%Library.String</ReturnType>
+<Implementation><![CDATA[
+	quit $extract(%request.Application,1,$l(%request.Application)-1)
+ //Проверка работы Commit из SmartSVN
+]]></Implementation>
+</Method>
+
+<Method name="DisplayErrorJS">
+<Description>
+Сообщение об ошибке</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>Oref:%CacheObject,aSc:%Status</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	&js<alert(#(##class(%CSP.Page).QuoteJS(..StatusForAlert(aSc)))#);>
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="StatusForAlert">
+<Description>
+Расшифровка сообщения %Status для IE</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>sc:%Status=$$$OK</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if ($$$ISOK(sc)) quit "" //#
+
+ // первоначально - пустое сообщение об ошибке
+ set message = ""
+ // в этой глобали сидело имя сохраняемого в данный момент класса (это в Integrity, метод - Save())
+ set className = $get(^CacheTemp.CurrentSavedObjectClassName($job))
+
+ // пробегаем по всем составляющим ошибки
+ do DecomposeStatus^%apiOBJ(sc,.error)
+ for i=1:1:error {
+	 set str = error(i)
+
+	 // Проверка завершилась неудачно
+	 if (error(i,"code")=5802) continue
+
+	 // Ошибка в самой Каше
+	 if (error(i,"code")'=+error(i,"code")) continue
+
+	 // Значение больше MAXLEN
+	 if (error(i,"code")=7201) {
+		 kill embedError
+		 set embedSc=error(i,"embeddederror",1)
+		 do DecomposeStatus^%apiOBJ(embedSc,.embedError)
+		 set propType=$p(embedError(1,"param",1),":",1)
+		 set propName=$p(embedError(1,"param",1),":",2)
+		 set propertyCaption=##class(p6.ClassDefinition).GetPropertyCaption(propType,propName)
+		 set str="Свойство '"_propertyCaption_"', равное '"_error(i,"param",1)_"', состоит из "_$length(error(i,"param",1))_" знаков при максимально допустимой длине "_error(i,"param",2)
+	 }
+
+	 // Значение меньше MINLEN
+	 if (error(i,"code")=7202) {
+		 kill embedError
+		 set embedSc=error(i,"embeddederror",1)
+		 do DecomposeStatus^%apiOBJ(embedSc,.embedError)
+		 set propType=$p(embedError(1,"param",1),":",1)
+		 set propName=$p(embedError(1,"param",1),":",2)
+		 set propertyCaption=##class(p6.ClassDefinition).GetPropertyCaption(propType,propName)
+		 set str="Свойство '"_propertyCaption_"', равное '"_error(i,"param",1)_"', состоит из "_$length(error(i,"param",1))_" знаков при минимально допустимой длине "_error(i,"param",2)
+	 }
+
+	 // Значение больше MAXVAL
+	 if (error(i,"code")=7203) {
+		 kill embedError
+		 set embedSc=error(i,"embeddederror",1)
+		 do DecomposeStatus^%apiOBJ(embedSc,.embedError)
+		 set propType=$p(embedError(1,"param",1),":",1)
+		 set propName=$p(embedError(1,"param",1),":",2)
+		 set propertyCaption=##class(p6.ClassDefinition).GetPropertyCaption(propType,propName)
+		 set str="Свойство '"_propertyCaption_"', равное '"_error(i,"param",1)_"', превышает максимально допустимое занчение '"_error(i,"param",2)_"'"
+	 }
+
+	 // Значение отсутствует в VALUELIST и не является пустым
+	 if (error(i,"code")=7205) {
+		 kill embedError
+		 set embedSc=error(i,"embeddederror",1)
+		 do DecomposeStatus^%apiOBJ(embedSc,.embedError)
+		 set propType=$p(embedError(1,"param",1),":",1)
+		 set propName=$p(embedError(1,"param",1),":",2)
+		 set propertyCaption=##class(p6.ClassDefinition).GetPropertyCaption(propType,propName)
+		 if (error(i,"param",1)]"") set str="Свойство '"_propertyCaption_"', равное '"_error(i,"param",1)_"', должно быть одно из '"_$e(error(i,"param",2),2,9999)_"'"
+		 else  set str=" "
+	 }
+	 // Значение должно быть числовым
+	 if (error(i,"code")=7207) {
+		 kill embedError
+		 set embedSc=error(i,"embeddederror",1)
+		 do DecomposeStatus^%apiOBJ(embedSc,.embedError)
+		 set propType=$p(embedError(1,"param",1),":",1)
+		 set propName=$p(embedError(1,"param",1),":",2)
+		 set propertyCaption=##class(p6.ClassDefinition).GetPropertyCaption(propType,propName)
+		 set str="Свойство '"_propertyCaption_"', равное '"_error(i,"param",1)_"', должно быть числовым"
+	 }
+	 // Значение не соответствует шаблону
+	 if (error(i,"code")=7209) {
+		 kill embedError
+		 set embedSc=error(i,"embeddederror",1)
+		 do DecomposeStatus^%apiOBJ(embedSc,.embedError)
+		 set propType=$p(embedError(1,"param",1),":",1)
+		 set propName=$p(embedError(1,"param",1),":",2)
+		 set propertyCaption=##class(p6.ClassDefinition).GetPropertyCaption(propType,propName)
+		 set str="Свойство '"_propertyCaption_"', равное '"_error(i,"param",1)_"', не соответствует шаблону "_error(i,"param",2)
+	 }
+
+	 // если была нарушена уникальность индекса
+	 if (error(i,"code")=5808) {
+		 set indexName = error(i,"param",1)
+		 set Index=##class(%Dictionary.CompiledIndex).%OpenId(className_"||"_indexName)
+		 set props=Index.Properties
+		 if $length(props,",")=1 {
+			 set str="Указанная запись с таким значением поля '"_##class(p6.ClassDefinition).GetPropertyCaption(className,props)_"' уже существует"
+		 } else {
+			 set str="Указанная запись с таким значением полей "
+			 for propN=1:1:$length(props,",") {
+				 set str=str_" '"_##class(p6.ClassDefinition).GetPropertyCaption(className,$p(props,",",propN))_"',"
+			 }
+			 set $e(str,$l(str))=""
+			 set str=str_" уже существует"
+		 }
+	 }
+	 // если не проставлено обязательное поле, то узнаем описание этого поля и вперед ...
+	 if (error(i,"code")=5659) {
+		 set propertyName = $piece($piece(error(i,"param",1),"::",2),"(",1)
+		 set caption = ##class(p6.ClassDefinition).GetPropertyCaption(className,propertyName)
+		 if (caption="") set caption=propertyName
+		 set str = "Свойство '"_caption_"' является обязательным"
+	 }
+	 // если встречается она из нижеупомянтух фраз, то меняем ее на фразу на русском языке
+	 if (error(i,"code")=10000) set str = "Ошибка: "_$get(error(i,"param",1),"Неизвестная ошибка")
+	 set message = message_str_"; "
+ }
+ quit message
+]]></Implementation>
+</Method>
+
+<Method name="CloseOref">
+<Description>
+Закрывает указанный объект в памяти</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>orefName:%Library.String=""</FormalSpec>
+<ProcedureBlock>0</ProcedureBlock>
+<Implementation><![CDATA[
+ if orefName="" quit
+ set $ztrap="ErrorCloseOref"
+ kill @orefName
+ErrorCloseOref //
+ quit  // закрыли ошибки
+ //#shu 020405, 021112
+]]></Implementation>
+</Method>
+
+<Method name="Next">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>codeString:%String=""</FormalSpec>
+<ProcedureBlock>0</ProcedureBlock>
+<Implementation><![CDATA[
+ merge %request.Data=^CacheTemp.RequestDataForNext($job)
+ kill ^CacheTemp.RequestDataForNext($job)
+
+ new OldIO, file, fileName
+
+ set OldIO = $io
+
+ set file = ##class(%File).%New("c:\CacheSys\temp"_$job_".txt")
+ do file.Open("WN")
+ set fileName = file.Name
+ use fileName
+
+ xecute codeString
+
+ use OldIO
+
+ do file.Close()
+ do file.%Close()
+
+ do ##class(%File).Delete(fileName)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

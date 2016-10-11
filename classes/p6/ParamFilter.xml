@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="9" zv="Cache for Windows NT (Intel) 5.0 (Build 434)" ts="2002-10-14 21:39:34">
+<Class name="p6.ParamFilter">
+<Super>%RegisteredObject</Super>
+<TimeChanged>59091,77972</TimeChanged>
+<TimeCreated>59078,61252</TimeCreated>
+<Property name="DataSet">
+<Type>%CacheString</Type>
+<Private>1</Private>
+</Property>
+<Property name="Filter">
+<Type>%String</Type>
+<Private>1</Private>
+</Property>
+<Property name="ParamCount">
+<Type>%Integer</Type>
+<InitialExpression>0</InitialExpression>
+<Private>1</Private>
+</Property>
+<Property name="ParamNames">
+<Type>%String</Type>
+<Collection>list</Collection>
+</Property>
+<Property name="ParamVals">
+<Type>%String</Type>
+<Collection>list</Collection>
+</Property>
+<Method name="CommaParamNames">
+<Implementation><![CDATA[ new i,Result
+ if ..ParamCount=0 quit ""
+ set Result=..ParamNames.GetAt(1)
+ for i=2:1:..ParamCount set Result=Result_","_..ParamNames.GetAt(i)
+ quit Result
+ ;#
+
+]]></Implementation>
+<ReturnType>%String</ReturnType>
+</Method>
+<Method name="CommaParamVals">
+<Implementation><![CDATA[ new i,Result
+ if ..ParamCount=0 quit ""
+ set Result=""""_..ParamVals.GetAt(1)_""""
+ for i=2:1:..ParamCount set Result=Result_","""_..ParamVals.GetAt(i)_""""
+ quit Result
+ ;#
+
+]]></Implementation>
+<ReturnType>%String</ReturnType>
+</Method>
+<Method name="GetFilter">
+<Implementation><![CDATA[ quit ..Filter
+ ;#
+
+]]></Implementation>
+<ReturnType>%String</ReturnType>
+</Method>
+<Method name="ParamCount">
+<Implementation><![CDATA[ quit ..ParamCount
+ ;#
+
+]]></Implementation>
+<ReturnType>%Integer</ReturnType>
+</Method>
+<Method name="SetFilter">
+<FormalSpec>filter:%String=""</FormalSpec>
+<Implementation><![CDATA[ new i,ParamName,chr
+ do ..ParamNames.Clear()
+
+ for i=1:1:$length(filter) do  ;
+ . set chr=$extract(filter,i)
+ . new found set found=0
+ . //пропускаем значение между двойных кавычек
+ . set found=(chr="""")
+ . if found do  ;
+ .. for j=i:1:$length(filter) set i=i+1 quit:$extract(filter,i)=""""
+ .. quit
+ . if found quit
+ . //пропускаем значение между апострофов
+ . set found=(chr="'")
+ . if found do  ;
+ .. for j=i:1:$length(filter) set i=i+1 quit:$extract(filter,i)="'"
+ .. quit
+ . if found quit
+ . //выделяем имя параметра
+ . set found=(chr=":")
+ . if found do  ;
+ .. set ParamName="" set i=i+1
+ .. for j=i:1:$length(filter) do  quit:'((chr?1A)!(chr?1N))
+ ... set chr=$extract(filter,i)
+ ... if (chr?1A)!(chr?1N) set ParamName=ParamName_chr
+ ... set i=i+1
+ ... quit
+ .. set ParamName=$zconvert(ParamName,"U")
+ .. if ..ParamNames.Find(ParamName)="" do ..ParamNames.Insert(ParamName)
+ .. quit
+ . if found quit 
+ .quit
+
+ set ..Filter=$zconvert(filter,"U")
+ set ..ParamCount=..ParamNames.Count()
+
+ //устанавливаем значения параметров по умолчанию
+ do ..ParamVals.Clear()
+ for i=1:1:..ParamCount do ..ParamVals.Insert("")
+ quit ..DataSet.OnFilterChange()
+ ;#
+
+]]></Implementation>
+<ReturnType>%Status</ReturnType>
+</Method>
+<Method name="SetParamAt">
+<FormalSpec>paramVal:%String="",paramIdx:%Integer=""</FormalSpec>
+<Implementation><![CDATA[ do ..ParamVals.Clear()
+ if ..ParamCount>paramIdx quit $$$ERROR(10,"Индекс параметра больше чем их количество")
+ do ..ParamVals.SetAt(paramVal,paramIdx)
+ quit ..DataSet.OnFilterParamsChange()
+
+]]></Implementation>
+<ReturnType>%Status</ReturnType>
+</Method>
+<Method name="SetParams">
+<FormalSpec>params:%String=""</FormalSpec>
+<Implementation><![CDATA[ new i,val
+ do ..ParamVals.Clear()
+ for i=1:1:..ParamCount do ..ParamVals.Insert($piece(params,",",i))
+ if ..ParamCount>0 quit ..DataSet.OnFilterParamsChange()
+ quit $$$OK
+
+]]></Implementation>
+<ReturnType>%Status</ReturnType>
+</Method>
+<Method name="Test">
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[ new x
+ set x=##class(p6.ParamFilter).%New() 
+ do x.SetFilter("(id>:param12) and (pd=""df:df""""dfdf"") or (x='kl:jh') and (id2<=:nparam34) or z=""hfhfhfhf""")
+ do x.SetParams(1,2,3)
+
+]]></Implementation>
+</Method>
+</Class>
+<Checksum value="2651930033"/>
+</Export>

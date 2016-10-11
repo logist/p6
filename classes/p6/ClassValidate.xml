@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.ClassValidate">
+<Description>
+Проверка данных в классах</Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Library.RegisteredObject</Super>
+<TimeCreated>59071,68808</TimeCreated>
+
+<Parameter name="CAPTION">
+<Default>Проверка данных в классах</Default>
+</Parameter>
+
+<Method name="Class">
+<Description>
+Проверка данных в классе</Description>
+<Final>1</Final>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[class:%String="",&report:%String]]></FormalSpec>
+<PublicList>z,Id</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ 	if (class = "") { quit $$$OK } //#
+ 	set result=##class(%ResultSet).%New("%DynamicQuery:SQL")
+	do result.Prepare("SELECT ID FROM "_class)
+	do result.Execute(10000)
+	for  {
+	   quit:'result.Next()  //#
+		do Verify
+	}
+	do result.Close()
+	kill result
+	quit $$$OK
+	
+	/// проверка загрузки и корректности данных в объекте
+Verify	
+   set $ztrap = "ErrVerify"
+   set Id = result.Data("ID")
+   xecute "set z = ##class("_class_").%OpenId(Id)"
+   set $zobjmod(z,0)=1 // IsModified for validation
+   set sc = z.%ValidateObject()
+   if ( 'sc ) {
+      set scText = sc
+      if (class="fd.FinDoc") {set Id=Id_" <"_z.Aka_">"}
+      set report($increment(report)) = $lb(class,Id,scText)
+      Write Id,", "
+   }
+   kill z
+	quit  //Verify
+	
+	/// обработка ошибки открытия объекта
+ErrVerify
+    set $ztrap = ""
+    set scText = $$$ERROR(10000,$ze)
+    set scText = $translate(scText,"<>","()")
+    set report($increment(report)) = $lb(class,Id,scText)
+	quit  // ErrVerify
+]]></Implementation>
+</Method>
+
+<Method name="AllClasses">
+<Description>
+Проверяет данные во всех хранимых классах в текущей области</Description>
+<Final>1</Final>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&report:%String,silent:%Library.String="",admin:p6.dt.Boolean=0]]></FormalSpec>
+<PublicList>className</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ // список всех классов в области
+ set time = $piece($h,",",2)
+ set result=##class(%Library.ResultSet).%New("%Library.ClassDefinition:ClassInfo")
+ do result.Execute()
+ while (result.Next()) {
+    if ( result.Get("Persistent") && ('result.Get("System")) ) {
+       if ('silent) { write !,result.Get("Name"),":",result.Get("Persistent"),":",
+       result.Get("System")      //,":",result.Get("Super")
+       write " - "
+    }
+    set className = result.Get("Name")
+    // не проверять вспомогательные классы
+    if (className["admin.Log" ) {}
+    else  {
+	    do ..Class(className,.report)
+       if ('silent) {
+	       write $j("",30-$length(className))," - Varified..." }
+       }
+    }       
+ }
+ do result.Close()
+ kill result
+ set time = $piece($h,",",2) - time
+ write !,"время работы: ",time\60," мин. ",time#60," сек.",!
+ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="AllGlobals">
+<Description>
+Проверяет все глобали в текущей области на соответствие
+последнего значения индекса 1 уровня данному на уровне глобали</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	// список всех глобалей в области
+	set rs = ##class(%ResultSet).%New("%SYS.GlobalQuery:NameSpaceList")
+ 	
+	Set sc=rs.Execute($znspace,,0) 
+	If $$$ISERR(sc) Do DisplayError^%apiOBJ(sc) Quit sc
+
+	write !,"    Сверка счетчиков на классах с последним индексом 1 уровня"
+	write !,"        - печатаются только глобали с отличающимися значениями"
+	write !!,"^имя = счетчик / наибольшее значение"
+	While rs.Next(.sc) {
+		If $$$ISERR(sc) Quit
+		set name = "^"_rs.Data("Name")
+	 	// проверка на наличие счетчика на уровне имени (число)
+	 	if $get(@name)=+$get(@name) {
+	 		set last = $order(@(name_"("""")"),-1)
+	 		if ($get(@name)'=last) {
+	 			write !,name," = ",$get(@name)," / ",last
+	 		}
+	 	}
+	}
+	If $$$ISERR(sc) Do DisplayError^%apiOBJ(sc) Quit sc
+		
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,53 @@
+body { background-color: "#E4E4E4"; font-family: "MS Sans Serif"; font-si-ze: "9pt"; }
+
+BODY {scrollbar-face-color:#4E6D90;
+ scrollbar-shadow-color:#FFFFFF; scrollbar-highlight-color:#FFFFFF;
+ scrollbar-3dlight-color:#4E6D90;
+ scrollbar-darkshadow-color:#4E6D90;
+ scrollbar-track-color:#FCFCFC;
+ scrollbar-arrow-color:#FFFFFF;}
+
+
+input, table, button,select { font-family: "MS Sans Serif"; font-si-ze: "9pt"; }
+h1 { font-family: "Helvetica"; font-size: 1.5em; }
+h2 { font-family: "Times New Roman"; font-si-ze: "18pt"; }
+
+.selected {
+     background-color:#ffff99;
+}
+
+input { 
+font-family: Tahoma, Verdana, Arial;
+	color: #004080;
+	he-ight: 19px;
+	font-si-ze: 11px;
+}
+
+textarea { 
+font-family: Tahoma, Verdana, Arial;
+	color: #004080;
+	font-si-ze: 11px;
+}
+
+table.ce {  }
+
+tr { font-family: "MS Sans Serif"; font-si-ze: "9pt"; }
+tr.ce { font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+tr.ceHeader { font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+tr.ceLightrow { background-color: #FFFFFF; font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+tr.ceDarkrow { background-color: #9DB9C8; font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+tr.ceSelected { background-color: #558097; color: #FFFFFF; font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+tr.ceCurrent { background-color: #22829D; color: #FFFFFF; font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+tr.ceTotal {  font-weight: bold; background-color: #B3B366; font-family: "MS Sans Serif"; font-si-ze: "9pt"; cursor: default; }
+
+td .ce {  }
+td.ceHeader { font-weight: bold; }
+td.ceSelected { background-color: #558097; color: #FFFFFF; }
+
+.docTitle {
+	font-family: Arial, Helvetica, sans-serif;
+	font-si-ze: 16px;
+	font-weight: bold;
+	color: #2A3F55;
+	text-decoration: none;
+}

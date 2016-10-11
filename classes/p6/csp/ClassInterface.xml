@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.csp.ClassInterface">
+<Description>
+Описание csp-интерфейсов хранимых классов 
+(однострочная информация об объекте, получение Id по введенному в Input значению)</Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>59122,60046</TimeCreated>
+
+<Method name="Display">
+<Description>
+Показать однострочное описание объекта в переменной переданной в aObj</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aObj:%String=""</FormalSpec>
+<PublicList>Obj,result,className</PublicList>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	new Obj, className, result
+	
+	set $zt="DisplayException"
+	if aObj'["@" xecute "set Obj="_aObj
+	else  set Obj=aObj
+	if (Obj=$$$NULLOREF) quit ""
+	set className = Obj.%ClassName(1)
+	
+	if (##class(%Dictionary.CompiledProperty).%ExistsId(className_"||Code")) {
+		quit Obj.Aka_" ["_Obj.Code_"]"
+	}
+    
+	// по умолчанию (если есть свойство Aka)
+	// товар,услуга,тзр,человек,организация,склад
+	if (##class(%Dictionary.CompiledProperty).%ExistsId(className_"||Aka"))
+	{
+		set result = Obj.Aka_" ["_Obj.%Id()_"]"
+		quit result
+	}
+	// по умолчанию (FullName)
+	if (##class(%Dictionary.CompiledProperty).%ExistsId(className_"||FullName") )
+	{
+		set result = Obj.FullName_" ["_Obj.%Id()_"]"
+		quit result
+	}
+	// по умолчанию (если нет свойсва Aka)
+	quit Obj.GetCaption()_" ["_Obj.%Id()_"]"
+	
+DisplayException
+	quit ""
+]]></Implementation>
+</Method>
+
+<Method name="DisplayAkaFullName">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>AObj:%RegisteredObject=""</FormalSpec>
+<PublicList>Obj,result</PublicList>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[	quit AObj.Aka_" ("_AObj.FullName_")"
+]]></Implementation>
+</Method>
+
+<Method name="GetEditPage">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>AObj:%RegisteredObject=""</FormalSpec>
+<PublicList>Obj,result</PublicList>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[	quit ..GetEditPageByClassName(AObj.%ClassName(1))
+]]></Implementation>
+</Method>
+
+<Method name="GetEditPageByClassName">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName:%String=""</FormalSpec>
+<PublicList>Obj,result</PublicList>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	set pref=""
+	quit ##class(p6.CspMethods).ApplicationUrl()_"/"_$translate(aClassName,".","/")_".csp"_pref
+]]></Implementation>
+</Method>
+
+<Method name="IsOpenByIdForClass">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+	if aClassName="ent.Empl" quit $$$NO
+	if aClassName="ent.Ts" quit $$$NO
+	if aClassName["cont" quit $$$NO
+
+	if ##class(%Dictionary.CompiledProperty).%ExistsId(aClassName_"||Code") quit $$$NO
+	quit $$$YES
+]]></Implementation>
+</Method>
+
+<Method name="IsQuickCreate">
+<Description>
+Быстрое создание объектов - если не нашли в справочнике, открываем форму ввода</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[	quit $$$NO
+]]></Implementation>
+</Method>
+</Class>
+</Export>

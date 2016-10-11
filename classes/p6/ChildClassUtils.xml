@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="8">
+<Class name="p6.ChildClassUtils">
+<Abstract>1</Abstract>
+<Super>%Persistent</Super>
+<TimeChanged>59071,68922</TimeChanged>
+<TimeCreated>59071,68814</TimeCreated>
+<Method name="BeforeChildDelete">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>childObjectId:%Library.String="",parentPropertyName:%String=""</FormalSpec>
+<Implementation><![CDATA[ new obj  set obj = ..%OpenId(childObjectId)
+ if (obj)
+ {
+ xecute "set ^CacheTemp.Parent2ChildDelete($job,obj.%ClassName(1))=obj."_parentPropertyName_".%Id()"
+ do obj.%Close()
+ }
+
+]]></Implementation>
+</Method>
+<Method name="AfterChildDelete">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>childObjectId:%Library.String="",childClassName:%String="",parentClassName:%String=""</FormalSpec>
+<Implementation><![CDATA[ new obj, sc, bool
+
+ set bool=$$$NO
+ xecute "if ($data(isIn"_$translate(parentClassName,".","")_"Delete)) set bool=1"
+ if (bool) quit $$$OK
+
+ xecute "set obj = ##class("_parentClassName_").%OpenId($get(^CacheTemp.Parent2ChildDelete($job,childClassName)))"
+ set sc = $$$OK
+ if (obj) set sc = obj.Save()
+ kill ^CacheTemp.Parent2ChildDelete($job,childClassName)
+ quit sc
+
+]]></Implementation>
+<ReturnType>%Status</ReturnType>
+</Method>
+</Class>
+<Checksum value="1238966633"/>
+</Export>

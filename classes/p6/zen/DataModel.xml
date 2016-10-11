@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.DataModel">
+<Description>
+Класс для добавления модели данных к хранимым классам Прототипа-5</Description>
+<Abstract>1</Abstract>
+<Super>%ZEN.DataModel.Adaptor</Super>
+<TimeCreated>60453,83343.406157</TimeCreated>
+
+<Method name="GetDisplayValue">
+<Description>
+This method return value which is displayed in textRefBook fields</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aId:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if '$zobjclassmethod(..%ClassName(1),"%ExistsId",aId) quit ""
+	if ##class(%Dictionary.CompiledProperty).%ExistsId(..%ClassName(1)_"||Code") {
+		set code=$zobjclassmethod(..%ClassName(1),"CodeGetStored",aId)
+	} else {
+		set code=aId
+	}
+
+	if ##class(%Dictionary.CompiledProperty).%ExistsId(..%ClassName(1)_"||Aka") {
+		quit $zobjclassmethod(..%ClassName(1),"AkaGetStored",aId)_" ["_code_"]"
+	}
+	quit ..%ClassName(1)_" ["_code_"]"
+]]></Implementation>
+</Method>
+
+<Method name="GetColumns">
+<Description>
+This method return columns, which are displayed by default 
+in p6:refbook and p6:textRefBook
+Format: Property1:Header1,Property2:Header2,...</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&result]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set propList = ##class(p6.ClassDefinition).GetPropertyList(..%ClassName(1))
+	if '$ListFind(propList,"Code") {
+		set result(0,"Field")="Id"
+		set result(0,"Caption")="Код"
+	}
+
+	for i=1:1:$ListLength(propList) {
+		set propName = $list(propList,i)
+		set propType = ##class(p6.ClassDefinition).GetPropertyType(..%ClassName(1),propName),
+			propCaption = ##class(p6.ClassDefinition).GetPropertyCaption(..%ClassName(1),propName),
+			propPersistent = ##class(p6.ClassDefinition).IsClassPersistent(propType),
+			propTransient = ##class(p6.ClassDefinition).IsPropertyTransient(..%ClassName(1),propName),
+			propCalculated = ##class(p6.ClassDefinition).IsPropertyCalculated(..%ClassName(1),propName),
+			propSequenceNumber = ##class(p6.ClassDefinition).GetPropertySequenceNumber(..%ClassName(1),propName)
+		if propCaption="" set propCaption=propName
+		
+		if $data(result(propSequenceNumber)) set propSequenceNumber=$order(result(""),-1)+1
+		
+		if propTransient||propCalculated continue
+		if propPersistent {
+			set result(propSequenceNumber,"Field")=propName
+			set result(propSequenceNumber,"Caption")=propCaption
+		} else {
+			set result(propSequenceNumber,"Field")=propName
+			set result(propSequenceNumber,"Caption")=propCaption
+		}
+	}
+	
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="CreateRefBook">
+<Description>
+This internal method creates the contents of the refbook component.</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+
+	set editClass=$zobjclassmethod(..%ClassName(1),"GetDefaultEditClassName")
+
+	set compiledClass=##class(%Dictionary.CompiledClass).%OpenId(editClass)
+	
+	if compiledClass]"" {
+		#; find XDATA block named Contents
+		Set tIndex = compiledClass.XDatas.FindObjectId(editClass_"||refBook")
+	}
+
+	If ($get(tIndex) '= "") {
+		#; get XDATA as stream
+		Set tStream = compiledClass.XDatas.GetAt(tIndex).Data
+		Do tStream.Rewind()
+
+		If (tStream.Size > 0) {
+
+			#; render the stream into composite object (with children)
+			Set tReader = ##class(%XML.Reader).%New()
+			Set tSC = tReader.OpenStream(tStream) If $$$ISERR(tSC) Quit tSC
+			Do tReader.Correlate("composite","%ZEN.Component.composite")
+			
+			#; there should only be one composite object defined
+			Do tReader.Next(.tComposite,.tSC)
+			If $$$ISERR(tSC) Quit tSC
+			If '$IsObject(tComposite) Quit $$$ERROR($$$GeneralError,"No <composite> element defined in Contents block.")
+		}
+		Quit tComposite.children.GetAt(1)
+	} else {
+		if $data(%page) {
+			set oldPage=%page
+		}
+		set %page=""
+		set RefBook=##class(p6.zen.component.refBook).%New()
+		set RefBook.className=..%ClassName(1)
+		set Table=##class(p6.zen.component.tablePane).%New()
+		set Table.id="table"
+		do RefBook.%AddChild(Table)
+
+		do ..GetColumns(.result)
+
+		set i=""
+		for {
+			set i=$order(result(i))
+			quit:i=""
+			set Column=##class(p6.zen.auxiliary.column).%New()
+			set Column.field=result(i,"Field")
+			set Column.header=result(i,"Caption")
+			do Table.%AddColumn(Column)
+		}
+
+		if $data(oldPage) {
+			set %page=oldPage
+		} else {
+			kill %page
+		}
+		quit RefBook
+	}
+	quit $$$NULLOREF
+]]></Implementation>
+</Method>
+
+<Method name="GetDefaultEditClassName">
+<Description>
+This return class name of default edit page class for this data model</Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA["zui."_..%ClassName(1)
+]]></Implementation>
+</Method>
+
+<Method name="GetLookupColumns">
+<Description>
+This method return columns, which are used to find objects while user type in p6:textRefBook
+Format: Property1[:Collation1],Property2[:Collation2],...
+Where Collation is one of Exact,StartsWith,Like. Default is Like.</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if ##class(%Dictionary.CompiledProperty).%ExistsId(..%ClassName(1)_"||Code") {
+		set result="Code:Код:Exact"
+	} else {
+		set result="Id:Код:Exact"
+	}
+	if ##class(%Dictionary.CompiledProperty).%ExistsId(..%ClassName(1)_"||Aka") {
+		set result=result_",Aka:Описание:Like"
+	}
+	quit result
+]]></Implementation>
+</Method>
+
+<Method name="%OnSaveSource">
+<Description>
+Custom Save() method</Description>
+<CodeMode>objectgenerator</CodeMode>
+<FormalSpec>pSource:%RegisteredObject</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tType = $$$getClassType(%compiledclass.Name)
+	If (tType = "persistent") {
+		Do %code.Write(" Set tSC = ..Save()")
+		Do %code.Write(" Set:$$$ISOK(tSC) ..%id = ..%Id()")
+		Do %code.Write(" Quit tSC")
+	}
+	Else {
+		Do %code.Write(" Quit $$$OK")
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnDeleteSource">
+<Description>
+Custom DeleteId() method</Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>objectgenerator</CodeMode>
+<FormalSpec>pID:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set %code.CodeMode = "expression"
+	Set tType = $$$getClassType(%compiledclass.Name)
+	If (tType = "persistent") {
+		Do %code.Write("..DeleteId(pID)")
+	}
+	Else {
+		Do %code.Write("$$$OK")
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnGetPropertyInfo">
+<Description>
+Custom controls</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pIndex:%Integer,&pInfo:%String,pExtended:%Boolean=0,pModelId:%String="",pContainer:%String=""]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	for {
+		set prop=$o(pInfo($get(prop)))
+		quit:prop=""
+
+		set:$d(pInfo(prop,"%type")) pInfo(prop,"%type")=$case($get(pInfo(prop,"%type")),
+			"text":"p6.zen.component.text",
+			"textarea":"p6.zen.component.textarea",
+			"dataCombo":"p6.zen.component.textRefBook",
+			"checkbox":"p6.zen.component.checkbox",
+			"combobox":"p6.zen.component.combobox",
+			"radioSet":"p6.zen.component.combobox",
+			:pInfo(prop,"%type")
+		)
+		
+		if $get(pInfo(prop,"%ptype"))=10 {
+			set pInfo(prop,"%type")="p6.zen.component.calendar"
+		}
+		set description=##class(p6.ClassDefinition).GetPropertyCaption(..%ClassName(1),prop)
+		set pInfo(prop,"label")=description
+	}
+	k ^a m ^a=pInfo
+
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

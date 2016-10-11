@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.UrlUtils">
+<ClassType/>
+<ProcedureBlock>0</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>59071,68806</TimeCreated>
+
+<Method name="ConvertString">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>str:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[ quit str
+]]></Implementation>
+</Method>
+
+<Method name="ConvertStringToExcel">
+<Description>
+замена служебных символов на коды c #</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>str:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if str["[" set str=..Replace(str,"[","#lsc")
+ if str["]" set str=..Replace(str,"]","#rsc")
+ quit str
+]]></Implementation>
+</Method>
+
+<Method name="Replace">
+<Description>
+замена подстроки на подстроку</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>sourceString:%String="",findString:%String="",replaceString:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if findString="" quit sourceString //#
+ new result, i, iLength
+ set result = "", iLength = $Length(sourceString,findString)
+ for i=1:1:iLength {
+ 	if (i'=1) set result = result_replaceString
+ 	set result = result_$Piece(sourceString,findString,i)
+ }
+ quit result
+]]></Implementation>
+</Method>
+
+<Method name="ConvertCurrency">
+<Description>
+преобразует сумму
+commaSign - знак-разделитель между целой и дробной частью
+separateSign - знак-разделитель между тысячами</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>currency:%Currency="",commaSign:%String=",",separateSign:%String=" "</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+   if ((currency="") || (currency=0) || (+currency=0)) { quit "" } //#
+   new result
+   set result = $translate($fnumber(currency,",",2),",",separateSign)
+   if (+result=0) { quit "" } //#
+   if (commaSign'=".") { quit $translate(result,".",commaSign) } //#
+   quit result
+]]></Implementation>
+</Method>
+
+<Method name="ConvertCurrency2">
+<Description>
+если после запятой не больше 2 знаков - то будет 2
+если больше 2 знаков - то будет столько сколько есть</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>currency:%Currency="",commaSign:%String=",",separateSign:%String=" "</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+   if ((currency="") || (currency=0) || (+currency=0)) { quit "" } //#
+   new result, count
+   set count = $Length($Piece(+currency,".",2))
+   if (count<2) { set count = 2 }
+   set result = $translate($fnumber(currency,",",count),",",separateSign)
+   if (+result=0) { quit "" } //#
+   if (commaSign'=".") { quit $translate(result,".",commaSign) } //#
+   quit result
+]]></Implementation>
+</Method>
+
+<Method name="ConvertCurrencyForPp">
+<Description>
+для печати платежки замена 00 копеек на =</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>currency:%Currency=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (currency="") { quit "" } //#
+ new sum
+ set sum = ..ConvertCurrency(currency)
+ if (sum?.E1"."2"0") { set sum = $extract(sum,1,$find(sum,".")-2)_"=" }
+ else { set sum = $extract(sum,1,$find(sum,".")-2)_"-"_$extract(sum,$find(sum,"."),$length(sum)) }
+ quit sum
+]]></Implementation>
+</Method>
+
+<Method name="ConvertDate">
+<Description>
+дата через точку с двумя либо четырьмя знаками в году</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date="",is4:p6.dt.Boolean=0</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (date="") { quit "" } //#
+ new str
+ set str = $translate($zdate(date,4,,4),"/",".")
+ if (is4=0) { set str = $extract(str,1,6)_$extract(str,9,10) }
+ quit str
+]]></Implementation>
+</Method>
+
+<Method name="ConvertFloat">
+<Description>
+добавляет ноль перед точкой, если меньше единицы
+если ноль - то пусто</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>float:p6.dt.Float=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (+float=0) { quit "" } //#
+ if ((float>0) && (float<1)) { set float = "0"_float }
+ if ((float<0) && (float>-1)) { set float = "-0"_(float*-1) }
+ quit float
+]]></Implementation>
+</Method>
+
+<Method name="GetUrlSearch">
+<Description>
+Собирает строку из имен переменных и их значений для подстановки в URL</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>propertyList:%Library.String=""</FormalSpec>
+<ReturnType>%Library.String</ReturnType>
+<Implementation><![CDATA[
+ if propertyList="" { quit "" } //#
+ set propertyList=$translate(propertyList," ","")
+ new result, plength, f, name
+ set plength=$length(propertyList,",")
+ set result=""
+ for f=1:1:plength {
+ 	set name=$piece(propertyList,",",f)
+ 	if name]"" { set result = result_"&"_name_"="_$get(@name) }
+ }
+ set result = $extract(result,2,999999)
+ quit result
+]]></Implementation>
+</Method>
+</Class>
+</Export>

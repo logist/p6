@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.unit.listener.Persistent">
+<Description><![CDATA[
+Cлушатель тестов, сохраняющий результаты тестирования в базу данных
+Формат записей:
+^p6.unit.TestResult($h начала записи)=<сведения>
+^p6.unit.TestResult($h начала записи,suite)=<сведения>
+^p6.unit.TestResult($h начала записи,suite,class)=<сведения>
+^p6.unit.TestResult($h начала записи,suite,class,method)=<сведения>
+^p6.unit.TestResult($h начала записи,suite,class,method,assertionNo)=<сведения>
+где сведения=$LB($zt начала,$zt окончания,кол-во тестов,кол-во ошибок,сообщение)]]></Description>
+<Super>p6.unit.listener.Console</Super>
+<TimeCreated>60780,39926.391562</TimeCreated>
+
+<Property name="TestQty">
+<Description>
+Количество запущенных тестов</Description>
+<Type>%Integer</Type>
+</Property>
+
+<Property name="Fails">
+<Description>
+Список ошибок</Description>
+<MultiDimensional>1</MultiDimensional>
+</Property>
+
+<Property name="ExecuteTs">
+<Description>
+Дата, время запуска</Description>
+<Type>%String</Type>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>param</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ..ExecuteTs=$h
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnSuccess">
+<FormalSpec>aSuite,aClass,aMethod,aMessage</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	$$$QuitOnError(##super(aSuite, aClass, aMethod, aMessage))
+
+	set $list(^p6.unit.TestResults(..ExecuteTs),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs)),3)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite)),3)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass)),3)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod)),3)+1
+
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnFail">
+<FormalSpec>aSuite="",aClass="",aMethod="",aMessage=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	$$$QuitOnError(##super(aSuite, aClass, aMethod, aMessage))
+
+	set $list(^p6.unit.TestResults(..ExecuteTs),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs)),3)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite)),3)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass)),3)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod),3)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod)),3)+1
+
+	set $list(^p6.unit.TestResults(..ExecuteTs),4)=$listget($get(^p6.unit.TestResults(..ExecuteTs)),4)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite),4)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite)),4)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass),4)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass)),4)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod),4)=$listget($get(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod)),4)+1
+
+	set assertNo=$order(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod,""),-1)+1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod,assertNo),3)=1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod,assertNo),4)=1
+	set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod,assertNo),5)=aMessage
+
+	set i%Fails=$get(i%Fails)+1
+	set i%Fails(i%Fails)=aSuite_":"_aClass_":"_aMethod_" ==> "_aMessage
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnBegin">
+<FormalSpec>aSuite="",aClass="",aMethod=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if aSuite="" set $list(^p6.unit.TestResults(..ExecuteTs),1)=$zh
+	else  if aClass="" set $list(^p6.unit.TestResults(..ExecuteTs,aSuite),1)=$zh
+	else  if aMethod="" set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass),1)=$zh
+	else  set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod),1)=$zh
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnEnd">
+<FormalSpec>aSuite="",aClass="",aMethod=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if aSuite="" set $list(^p6.unit.TestResults(..ExecuteTs),2)=$zh
+	else  if aClass="" set $list(^p6.unit.TestResults(..ExecuteTs,aSuite),2)=$zh
+	else  if aMethod="" set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass),2)=$zh
+	else  set $list(^p6.unit.TestResults(..ExecuteTs,aSuite,aClass,aMethod),2)=$zh
+		 
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

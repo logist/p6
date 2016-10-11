@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.admin.p6UpdateIncludices">
+<Description>
+Created using the page template: Default</Description>
+<Super>p6.zen.EditPage</Super>
+<TimeCreated>60961,46387.88488</TimeCreated>
+
+<Parameter name="APPLICATION">
+<Description>
+Class name of application this page belongs to.</Description>
+<Default>p6.zen.Application</Default>
+</Parameter>
+
+<Parameter name="PAGENAME">
+<Description>
+Displayed name of this page.</Description>
+<Default>Пересчет индексов во всех классах и очистка кэша SQL запросов</Default>
+</Parameter>
+
+<Parameter name="DOMAIN">
+<Description>
+Domain used for localization.</Description>
+</Parameter>
+
+<XData name="Style">
+<Description>
+This Style block contains page-specific CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+</style>
+]]></Data>
+</XData>
+
+<XData name="editPane">
+<Description>
+This XML block defines the contents of this page.</Description>
+<XMLNamespace>http://www.intersystems.com/zen</XMLNamespace>
+<Data><![CDATA[
+<pane  xmlns="http://www.intersystems.com/zen" xmlns:p6="http://www.dimas.ru/p6" id="editPane">
+
+<html align="center" OnDrawContent="Update" ></html>
+<button id="btClose"  align="center" caption="Закрыть окно" onclick="CloseWindow()" />
+</pane>
+]]></Data>
+</XData>
+
+<Method name="Update">
+<FormalSpec>seed</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+ write !,"<br> очистка кэшированных запросов - $system.SQL.Purge(0)<br>",!
+ kill ^mcq,^mqh  ; Purge all Cached Queries
+ do ##class(p6.ClassUtils).UpdateIndices(0,1) //для html перевод строки
+ write !,"<br> очистка ненужных глобалей - admin.Version.PurgeUnnecessary()<br>",!
+ do ##class(admin.Version).PurgeUnnecessary()
+ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="Run">
+<Language>javascript</Language>
+<Implementation><![CDATA[ //zenPage.OnDrawContent();
+]]></Implementation>
+</Method>
+</Class>
+</Export>

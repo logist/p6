@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-04 13:28:20">
+<Class name="p6.unit.reporter.Console">
+<Description>
+Консольный отчет</Description>
+<Super>p6.unit.reporter.Abstract</Super>
+<TimeCreated>60780,45794.99486</TimeCreated>
+
+<Property name="Listener">
+<Type>p6.unit.listener.Console</Type>
+</Property>
+
+<Method name="Run">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	write !,"=== Tests runned: "_..Listener.TestQty
+	if $get(..Listener.Fails) write ", FAILED: "_..Listener.Fails
+	for i=1:1:$get(..Listener.Fails) {
+		write !,!,..Listener.Fails(i)
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

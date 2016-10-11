@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.unit.AddObject">
+<Description>
+Добавление объектов определенного класса</Description>
+<Super>%RegisteredObject</Super>
+<TimeCreated>60781,40396.439778</TimeCreated>
+
+<Property name="ClassName">
+<Type>%String</Type>
+</Property>
+
+<Property name="Prop">
+<Type>%String</Type>
+<MultiDimensional>1</MultiDimensional>
+</Property>
+
+<Property name="PropType">
+<Type>%String</Type>
+<MultiDimensional>1</MultiDimensional>
+</Property>
+
+<Property name="PropField">
+<Type>%String</Type>
+<MultiDimensional>1</MultiDimensional>
+</Property>
+
+<Method name="Run">
+<Description>
+aClassName - имя класса
+aProperties - таблица в формате 
+$lb(
+  $lb(prop1,prop2,prop3,...),
+  $lb(obj1val1,obj1val2,obj1val3,...)
+  $lb(obj2val1,obj2val2,obj2val3,...)
+  .....
+)</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName:%String,aProperties:%List</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set AddObject=..%New()
+	set AddObject.ClassName=aClassName
+	$$$QuitOnError(AddObject.FillProps($lg(aProperties,1)))
+	set sc=$$$OK
+	for i=2:1:$listlength(aProperties) {
+		if $lg(aProperties,i)="" continue
+		set sc=$system.Status.AppendStatus(sc,AddObject.CreateOne($lg(aProperties,i)))
+	}
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="FillProps">
+<FormalSpec>aProps:%List</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	for i=1:1:$listlength(aProps) {
+		set i%Prop(i)=$piece($lg(aProps,i),".",1)
+		set i%PropType(i)=##class(p6.ClassDefinition).GetPropertyType(..ClassName,i%Prop(i))
+		set i%PropField(i)=##class(p6.Convert).Replace($piece($lg(aProps,i),".",2,100),".","->")
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="CreateOne">
+<FormalSpec>aProps:%List</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc=$$$OK
+	set Obj=$zobjclassmethod(..ClassName,"%New")
+	for i=1:1:$listlength(aProps) {
+		if ('##class(p6.ClassDefinition).IsClassPersistent(i%PropType(i))) 
+			|| ($lg(aProps,i)=""){
+			set $zobjproperty(Obj,i%Prop(i))=$lg(aProps,i)
+		} else {
+			set Rs=##class(%ResultSet).%New()
+			set searchQuery="select id from "_i%PropType(i)_" where "_i%PropField(i)_"='"_$lg(aProps,i)_"'"
+			set sc=Rs.Prepare(searchQuery)
+			set sc=Rs.Execute()
+			if 'Rs.Next() set sc=$$$ERROR(10000,"Поиск объекта для поля "_i%Prop(i)_" по запросу "_searchQuery_" не принес результатов.") quit 
+			set LoadObj=$zobjclassmethod(i%PropType(i),"%OpenId",Rs.GetData(1))
+			set $zobjproperty(Obj,i%Prop(i))=LoadObj
+		}
+		if 'sc quit
+	}
+	if 'sc quit sc
+	if ##class(%Dictionary.CompiledMethod).%ExistsId(..ClassName_"||Save") {
+		set sc=$zobjmethod(Obj,"Save")
+	} else {
+		set sc=$zobjmethod(Obj,"%Save")
+	}
+	quit sc
+]]></Implementation>
+</Method>
+</Class>
+</Export>

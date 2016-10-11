@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.Controller">
+<Description>
+Controller class</Description>
+<Abstract>1</Abstract>
+<IncludeCode>%ZEN.Utils,%occInclude,%cspInclude</IncludeCode>
+<IncludeGenerator>%occInclude</IncludeGenerator>
+<TimeCreated>60908,48709.913481</TimeCreated>
+
+<Method name="InvokeClassMethod">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pClass:%String,pMethod:%String,pRetType:%String,pSyncFlag:%Boolean,pHeader:%String,pBody:%String,pSpec:%String="",pArgs:%String="",pNamespace:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	Set tSC = $$$OK
+	Set $ZT = "Trap"
+	Set tRetVal = ""
+	Set tTryBlock = 0
+
+	Do {
+		#; test for namespace change
+		If (pNamespace '= "") {
+			#; change to specified namespace
+			Set tSC = ##class(%ZEN.Controller).%ChangeNS(pNamespace)		
+			If $$$ISERR(tSC) Quit
+		}
+
+		#; make sure method is a WebMethod
+		Set ZENMETHOD=0
+#if	$ZV'["5.2"
+		$$$comMemberKeyGetLvar(ZENMETHOD,pClass,$$$cCLASSmethod,pMethod,$$$cMETHzenmethod)
+#endif
+		$$$comMemberKeyGetLvar(WEBMETHOD,pClass,$$$cCLASSmethod,pMethod,$$$cMETHwebmethod)
+		If (('ZENMETHOD)&&('WEBMETHOD)) {
+			Set tSC = $$$ERROR($$$GeneralError,"Attempt to call non-ZENMethod")
+			Quit
+		}
+
+		New %args,%ret
+		
+		#; special variable to indicate context in which server
+		#; methods are called: "method","submit", or "page"
+		Set %zenContext = "method"
+
+		$$$ZENLOG("METHOD",pClass _ "." _ pMethod)
+
+		#; deserialize state
+		#; this may create %page (if we have objects in our arg list
+		#; that can reach it!)
+
+		Set tSC = ##class(%ZEN.Controller).%DeserializePage(pHeader,pBody,.tObjSet)
+		If $$$ISERR(tSC) Quit
+
+		#; build expression to execute method
+		Set x = $Case(pRetType'="",1:"Set %ret =",:"Do")_" ##class(" _ pClass _ ")." _ pMethod _ "("
+
+		#; build set of arguments
+		#; for objects, make sure they are deserialized.
+		Set tArgCount = $Case(pSpec,"":0,:$L(pSpec,","))
+		For n=1:1:tArgCount {
+			Set tType = $P(pSpec,",",n)
+			If (tType = "O") { // object: dereference from serial state
+				Set idx = $P(pArgs,$C(4),n)
+				Set %args(n) = $S(idx="":"",1:$G(tObjSet(idx)))
+			}
+			Else { // literal||boolean
+				Set %args(n) = $P(pArgs,$C(4),n)
+			}
+			Set x = x _ $S(n>1:",",1:"") _ "%args(" _ n _ ")"
+		}
+
+		Set x = x _ ")"
+		
+		If (pSyncFlag) {
+			Set tMaxIndex = ##class(%ZEN.Controller).%BeginChangeTracking()
+		}
+
+		#; debugging aid
+		Write "// InvokeClassMethod: ",pClass,":",pMethod,"("
+		For n=1:1:tArgCount {
+			Write $S(n>1:",",1:""),$zutil(144,1,$G(%args(n)))
+		}
+		Write ")",!
+
+		#; start a client-side try block
+		Write "try {",!
+		Set tTryBlock = 1
+
+		#; invoke method.
+		#; We set up a $ET to grab the stack trace into %ST at the point of error rather than the trap
+		New %ST,%ER
+		Xecute "New $ET Set $ET=""Set %ER=$ZE,%ST=##class(%ZEN.Controller).%GetStackTrace(1) Set $EC="""""""""" "_x
+		If (pRetType'="") {
+			Set tRetVal = %ret
+		}
+		If $G(%ER)'="" Goto Trap
+		
+		#; create children of any newly created composite components
+		Set tSC = ##class(%ZEN.Controller).%MaterializeComposites()
+		If $$$ISERR(tSC) Quit
+
+		#; client-side catch block
+		Write "}",!
+		Write "catch(ex) {",!
+		Write " zenExceptionHandler(ex,arguments,'A JavaScript error occurred while invoking a server class method.\nClass: ",pClass,"\nMethod: ",pMethod,"\n');",!
+		Write "}",!
+		Set tTryBlock = 0
+
+		If (pSyncFlag) {
+			Do ##class(%ZEN.Controller).%EndChangeTracking(tMaxIndex,,pClass_":"_pMethod)
+		}
+		Kill %args,%ret
+
+	} While (0)
+	
+	If $$$ISERR(tSC) {
+		$$$ZENLOGSTATUS(tSC)
+		Do ##class(%ZEN.Utils).%DisplayErrorJS("", tSC)
+	}
+
+Done
+	Quit tRetVal
+Trap
+	Set $ZT=""
+	$$$ZENLOGERROR($ZE)
+	Write:$G(tTryBlock) "} catch(ex) { }",!
+	&js<alert('Error invoking class method: #(pClass)#:#(pMethod)#:\n#($ZCVT($G(%ER,$ZE),"O","JS"))#\n#($G(x))#\n-------------------\nSTACK:\n#($G(%ST,##class(%ZEN.Controller).%GetStackTrace()))#\n' + zenStackTrace());>
+	Goto Done
+]]></Implementation>
+</Method>
+
+<Method name="InvokeInstanceMethod">
+<Description><![CDATA[
+This method is called from the client when it wants to
+invoke an instance method for a component.
+<var>pObjIndex</var> is the index of *this* object.<br>
+<var>pMethod</var> is the method name.<br>
+<var>pRetType</var> is the client type of the return type (or "").<br>
+<var>pHeader</var> is the header section of the serial state.<br>
+<var>pBody</var> is the body section of the serial state.<br>
+<var>pSpec</var> is the method signature: "L,L,O" (L = Literal, B = Boolean, O = Object).<br>
+<var>pArgs</var> is the serialized set of arguments. ($C(4) delimited).<br>
+<var>pNamespace</var> is the namespace to run in.<br>]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pObjIndex:%Integer,pMethod:%String,pRetType:%String,pSyncFlag:%Boolean,pHeader:%String,pBody:%String,pSpec:%String="",pArgs:%String="",pNamespace:%String=""</FormalSpec>
+<Implementation><![CDATA[
+	Set tSC = $$$OK
+	Set $ZT = "Trap"
+	Set tRetVal = ""
+	Set tTryBlock = 0
+	Do {
+		#; test for namespace change
+		If (pNamespace '= "") {
+			#; change to specified namespace
+			Set tSC = ##class(%ZEN.Controller).%ChangeNS(pNamespace)		
+			If $$$ISERR(tSC) Quit
+		}
+
+		New %obj,%args,%ret
+
+		#; special variable to indicate context in which server
+		#; methods are called: "method","submit", or "page"
+		Set %zenContext = "method"
+
+		#; deserialize state
+		#; this will create %page
+		Set tSC = ##class(%ZEN.Controller).%DeserializePage(pHeader,pBody,.tObjSet)
+		If $$$ISERR(tSC) Quit
+
+		#; dereference *this*
+		Set %obj = $G(tObjSet(pObjIndex))
+
+		If ('$IsObject(%obj)) {
+			Set tSC = $$$ERROR($$$GeneralError,"Unable to create %this object")
+			Quit
+		}
+
+		$$$ZENLOG("METHOD",%obj _":"_ pMethod)
+
+		#; make sure method is a WebMethod
+		Set ZENMETHOD=0
+#if	$ZV'["5.2"
+		$$$comMemberKeyGetLvar(ZENMETHOD,$zobjclass(%obj),$$$cCLASSmethod,pMethod,$$$cMETHzenmethod)
+#endif
+		$$$comMemberKeyGetLvar(WEBMETHOD,$zobjclass(%obj),$$$cCLASSmethod,pMethod,$$$cMETHwebmethod)
+		If (('ZENMETHOD)&&('WEBMETHOD)) {
+			Set tSC = $$$ERROR($$$GeneralError,"Attempt to call non-ZENMethod")
+			Quit
+		}
+
+		#; build expression to execute method
+		Set x = $Case(pRetType'="",1:"Set %ret =",:"Do")_" %obj." _ pMethod _ "("
+
+		#; build set of arguments
+		#; for objects, make sure they are deserialized.
+		Set tArgCount = $Case(pSpec,"":0,:$L(pSpec,","))
+		For n=1:1:tArgCount {
+			Set tType = $P(pSpec,",",n)
+			If (tType = "O") { // object: dereference from serial state
+				Set idx = $P(pArgs,$C(4),n)
+				Set %args(n) = $S(idx="":"",1:$G(tObjSet(idx)))
+			}
+			Else { // literal|boolean
+				Set %args(n) = $P(pArgs,$C(4),n)
+			}
+			Set x = x _ $S(n>1:",",1:"") _ "%args(" _ n _ ")"
+		}
+
+		Set x = x _ ")"
+		If (pSyncFlag) {
+			Set tMaxIndex = ##class(%ZEN.Controller).%BeginChangeTracking()
+		}
+
+		#; debugging aid
+		Write "// InvokeInstanceMethod: ",%obj,":",pMethod,"("
+		For n=1:1:tArgCount {
+			Write $S(n>1:",",1:""),$zutil(144,1,$G(%args(n)))
+		}
+		Write ")",!
+
+		#; start a client-side try block
+		Write "try {",!
+		Set tTryBlock = 1
+
+		#; invoke method.
+		#; We set up a $ET to grab the stack trace into %ST at the point of error rather than the trap
+		New %ST,%ER
+		Xecute "New $ET Set $ET=""Set %ER=$ZE,%ST=##class(%ZEN.Controller).%GetStackTrace(1) Set $EC="""""""""" "_x
+		If (pRetType'="") {
+			Set tRetVal = %ret
+		}
+		If $G(%ER)'="" Goto Trap
+
+		#; create children of any newly created composite components
+		Set tSC = ##class(%ZEN.Controller).%MaterializeComposites()
+		If $$$ISERR(tSC) Quit
+
+		#; client-side catch block
+		Write "}",!
+		Write "catch(ex) {",!
+		Write " zenExceptionHandler(ex,arguments,'A JavaScript error occurred while invoking a server instance method.\nClass: ",$zobjclass(%obj),"\nMethod: ",pMethod,"\n');",!
+		Write "}",!
+
+		Set tTryBlock = 1
+		If (pSyncFlag) {
+			Do ##class(%ZEN.Controller).%EndChangeTracking(tMaxIndex,,$zobjclass(%obj)_"."_pMethod)
+		}
+
+		Kill %obj,%args,%ret
+
+	} While (0)
+
+	If $$$ISERR(tSC) {
+		$$$ZENLOGSTATUS(tSC)
+		Do ##class(%ZEN.Utils).%DisplayErrorJS("", tSC)
+	}
+Done
+	Quit tRetVal
+Trap
+	Set $ZT=""
+	$$$ZENLOGERROR($ZE)
+	Write:$G(tTryBlock) "} catch(ex) { }",!
+	&js<alert('Error invoking instance method: #(pMethod)#:\n#($ZCVT($G(%ER,$ZE),"O","JS"))#\n#($G(x))#\n%obj=#($G(%obj))#\n-------------------\nSTACK:\n#($G(%ST,##class(%ZEN.Controller).%GetStackTrace()))#\n' + zenStackTrace());>
+	Goto Done
+]]></Implementation>
+</Method>
+</Class>
+</Export>

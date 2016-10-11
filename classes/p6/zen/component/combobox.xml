@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.combobox">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.combobox</Super>
+<TimeCreated>60852,69236.937932</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Method name="%OnAddToPageAfter">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set form=..%GetForm()
+	set className=form.%controller.modelClass
+	if ..label="" {
+		set ..label=##class(p6.ClassDefinition).GetPropertyCaption(className,..dataBinding)
+	}
+	if ..id="" {
+		set ..id=$tr(..dataBinding,"%.()","____")
+	}
+	if ..name="" {
+		set ..name=..id
+	}
+	set ..required=##class(%Dictionary.CompiledProperty).%OpenId(className_"||"_..dataBinding).Required
+	if '..required {
+		set ..valueList=##class(%Dictionary.CompiledProperty).%OpenId(className_"||"_..dataBinding).Parameters.GetAt("DISPLAYLIST")
+	} else {
+		set ..valueList=$e(##class(%Dictionary.CompiledProperty).%OpenId(className_"||"_..dataBinding).Parameters.GetAt("DISPLAYLIST"),2,9999)
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="inputKeyHandler">
+<Description>
+Keydown within input control.</Description>
+<FormalSpec>evt</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	evt = evt ? evt : window.event;
+	if ((!this.isDropdownVisible) && (evt.keyCode==zenENTER)) {
+		return false;
+	}
+
+	// invoke callback, if present
+	return this.invokeSuper('inputKeyHandler',arguments);
+]]></Implementation>
+</Method>
+</Class>
+</Export>

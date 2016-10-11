@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.addDynaGrid">
+<Super>%ZEN.Component.dynaGrid</Super>
+<TimeCreated>60961,66003.973986</TimeCreated>
+
+<Property name="OnCreateDataSet">
+<Type>%ZEN.Datatype.delegator</Type>
+<Parameter name="FORMALSPEC" value="pGrid:%ZEN.Component.dynaGrid,pDataSet:%ZEN.Auxiliary.dataSet,pConfigSet:%ZEN.Auxiliary.dataSet"/>
+<Parameter name="RETURNTYPE" value="%Status"/>
+</Property>
+
+<Property name="configSet">
+<Description><![CDATA[
+Label-указывает на тип контрола<br>
+1-edit<br>
+2-edit with date verify<br>
+3-select<br>
+4-checkbox<br>
+5-multiline edit<br>
+6-edit with time verify<br>
+Value в строке<br>
+для select- варианты выбора(без пустого!)<br>
+для checbox 1-что показывать если true;   2-если false<br>
+для multiline - колво строчек]]></Description>
+<Type>%ZEN.Auxiliary.dataSet</Type>
+<Parameter name="ZENSETTING" value="0"/>
+</Property>
+
+<Method name="%CreateDataSet">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set $ZT="Trap"
+	Set tSC = $$$OK
+
+	Set tHost = $S($IsObject(..composite):..composite,1:$G(%page))
+	If ($IsObject(tHost) && (..OnCreateDataSet '= "")) {
+		#; dispatch
+		Set tSC = $zobjmethod(tHost,..OnCreateDataSet,%this,..dataSet,..configSet)
+	}
+Done
+	Quit tSC
+Trap
+	Set $ZT=""
+	Set tSC = $$$ERROR($$$GeneralError,$ZE)
+	Goto Done
+]]></Implementation>
+</Method>
+
+<Method name="getEditCellHTML">
+<Description><![CDATA[
+Return the HTML that renders the cell editor for the given cell.
+<var>r</var> and <var>c</var> are 1-based.]]></Description>
+<FormalSpec>r,c,value</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	// test for user callback
+	var html = '';
+	var usercode = '';
+	if (this.oneditcell) {
+		usercode = zenInvokeCallbackMethod(this.oneditcell,this,'oneditcell','value',value);
+	}
+	if (usercode && '' != usercode) {
+		html = usercode;
+	}
+	else {
+		var configSet = this.getConfigSet();
+		var type=configSet.getLabel(c-1,2);
+		switch(type) 
+		{
+			case "2":
+				html = '<input class="dynaGridInput" id="cellEditor" type="text" value="'+zenEscapeXML(value)+'" onblur="zenPage.getComponent('+this.index+').stopEditCell(false,2);">';
+			break;
+			
+			case "3":
+				html='<select class="dynaGridInput" id="cellEditor" onblur="zenPage.getComponent('+this.index+').stopEditCell(false,3);">';
+				html=html+'<option value=""></option>';
+				var i=0
+				while(true)
+				{
+					var data=configSet.getData(i,c-1);
+					if(data=="") break;
+					if(value==data)html=html+'<option value="'+i+'" selected>'+data+'</option>';
+					else html=html+'<option value="'+i+'">'+data+'</option>';	
+					i++;
+				}
+				html=html+'</select>';
+			break;
+			
+			case "4":
+				if(value==configSet.getData(0,c-1)) html='<input class="dynaGridInput" id="cellEditor" type="checkbox" value="'+zenEscapeXML(value)+'"  onblur="zenPage.getComponent('+this.index+').stopEditCell(false,4);" checked>';
+				else html='<input class="dynaGridInput" id="cellEditor" type="checkbox" value="'+zenEscapeXML(value)+'" onblur="zenPage.getComponent('+this.index+').stopEditCell(false,4);">';
+			break;
+			
+			case "5":
+				html = '<TEXTAREA class="dynaGridInput" id="cellEditor" rows='+configSet.getData(0,c-1)+' onblur="zenPage.getComponent('+this.index+').stopEditCell(false,5);">'+zenEscapeXML(value)+'</textarea>'
+			break;			
+			
+			case "6":
+				html = '<input class="dynaGridInput" id="cellEditor" type="text" value="'+zenEscapeXML(value)+'" onblur="zenPage.getComponent('+this.index+').stopEditCell(false,6);">';
+			break;			
+			
+			default:
+				html = '<input class="dynaGridInput" id="cellEditor" type="text" value="'+zenEscapeXML(value)+'" onblur="zenPage.getComponent('+this.index+').stopEditCell(false);">';
+			break;
+		}
+	}
+	return html;
+]]></Implementation>
+</Method>
+
+<Method name="stopEditCell">
+<Description><![CDATA[
+Stop editing of the current cell.<br>
+If <var>cancel</var> is true, then do not save current control value.
+mode -режим работы для разных типов(в соответствии с configSet)]]></Description>
+<FormalSpec>cancel,mode</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	cancel = (null==cancel) ? false : cancel;
+	var value;
+	var configSet = this.getConfigSet();
+	
+	if (this.currDiv && this.cellHasFocus) {
+		// get rid of edit control in cell; save value
+		this.cellHasFocus = false;
+		this.F2Mode = false;
+		var cell = this.window.document.getElementById("cellEditor");
+		zenASSERT(cell,"Unable to find cellEditor control",arguments);
+		if (cell) {
+			if(cancel)
+			{
+				value=this.getCellValue(this.currRow, this.currColumn);
+			}else {
+				type=configSet.getLabel(this.currColumn-1,2)
+				switch(type)
+				{
+					case "2":
+						value=this.NormalizeDate(cell.value);
+					break;
+					
+					case "3":
+						var parentNode=cell.parentNode;
+						
+						if(cell.value=="")
+						{
+							value="";
+						}else{
+							//-1+1 - чтоб JS трактовал как число
+							value=configSet.getData((cell.value-1+1),this.currColumn-1);
+						}
+					break;					
+					
+					case "4":
+						if(cell.checked)
+							value=configSet.getData(0,this.currColumn-1);
+						else
+							value=configSet.getData(1,this.currColumn-1);
+					break;
+					
+					case "6":
+						value=this.NormalizeTime(cell.value);
+					break;					
+										
+					default:
+						value = cell.value;
+					break;
+				}
+			}
+			this.currDiv.onclick = this.oldOnclick;
+			this.setCellValue(value, this.currRow, this.currColumn);
+			cell.value = '';
+		}
+		this.currDiv = null;
+
+		// invoke cell onchangecell callback, if present
+		if (!cancel) {
+			zenInvokeCallbackMethod(this.onchangecell,this,'onchangecell');
+		}
+
+		// invoke grid-wide onchange callback, if present
+		zenInvokeCallbackMethod(this.onchange,this,'onchange');
+
+		// give focus back to invisible control
+		this.focus();
+	}
+]]></Implementation>
+</Method>
+
+<Method name="NormalizeDate">
+<CodeMode>expression</CodeMode>
+<FormalSpec>aDate:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[##class(p6.dt.Date).LogicalToDisplay(##class(p6.dt.Date).DisplayToLogical(aDate))
+]]></Implementation>
+</Method>
+
+<Method name="NormalizeTime">
+<CodeMode>expression</CodeMode>
+<FormalSpec>aTime:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[##class(p6.dt.Time).LogicalToDisplay(##class(p6.dt.Time).DisplayToLogical(aTime))
+]]></Implementation>
+</Method>
+
+<Method name="%OnNew">
+<FormalSpec>initvalue:%CacheString</FormalSpec>
+<Private>1</Private>
+<ProcedureBlock>1</ProcedureBlock>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#; make sure we have a dataSet property
+	Set ..dataSet = ##class(%ZEN.Auxiliary.dataSet).%New(2)
+	Set ..configSet = ##class(%ZEN.Auxiliary.dataSet).%New(2)
+	Do:$IsObject($G(%page)) %page.%AddComponent(..dataSet)
+	Do:$IsObject($G(%page)) %page.%AddComponent(..configSet)
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="getConfigSet">
+<Description>
+Return the dataSet object associated with this grid.</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var controller = this.getController();
+	return (controller ? controller : this.configSet);
+]]></Implementation>
+</Method>
+
+<Method name="renderContents">
+<Description>
+Client-side method to render this component.</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var controller = this.getController();
+	if (null == controller) {
+		// try to connect to dataController
+		this.connectToController();
+	}
+
+	var encDiv = this.getEnclosingDiv();
+	// test if we have not been rendered yet
+	if (encDiv == null) return;
+
+	// build HTML for grid
+	var html = new Array();
+
+	// use hidden control to make sure there is a value to submit
+	html[html.length] = '<input type="hidden" id="'+this.makeId('control')+'" name="'+this.name+'" value="'+this.value+'">';
+
+	html[html.length] = '<table id="'+this.makeId('table')+'" class="'+this.gridClass+'" border="0" cellspacing="0" cellpadding="0">';
+
+	var dataSet = this.getDataSet();
+	var cols = dataSet.getDimSize(2);
+	if (cols < 2) {
+		this.F2Mode = true;
+	}
+	else {
+		this.F2Mode = false;
+	}
+
+	if (zenIsMissing(dataSet)) {
+		html[html.length] = '<tr><td>dynaGrid has no data.</td></tr>';
+	}
+	else {
+		zenASSERT(dataSet.getDimensions()>0,"dataSet must have at least one dimension.",arguments);
+
+		// column headers
+		if (this.showColumnLabels) {
+			html[html.length] = '<tr>';
+			if (this.showRowLabels) {
+				// gridLabel in corner
+				var glbl;
+				if (dataSet.getDimensions() > 2) {
+					// 3-D grid: show page label
+					glbl = dataSet.getLabel(this.currPage-1,3);
+					glbl = (''==glbl? this.currPage : glbl);
+					glbl = '<a onclick="zenPage.getComponent('+this.index+').previousPage();">&laquo;</a>' + '&nbsp;' + '<a onclick="zenPage.getComponent('+this.index+').nextPage();">&raquo;</a>&nbsp;' + glbl;
+
+				}
+				else {
+					glbl = (''==this.gridLabel?'&nbsp;':this.gridLabel);
+				}
+				html[html.length] = '<th nowrap="1" id="gridLabel_'+this.index+'" class="dynaGridLabel"'+'>'+glbl+'</th>';
+			}
+			for (var c = 0; c < cols; c++) {
+				var cinfo = this.getColumnInfo(c);
+				if (cinfo && cinfo.hidden) continue;
+
+				var data = dataSet.getLabel(c,2);
+				data = ('' == data) ? '&nbsp;' : data;
+				var thstyle = '';
+				var thtip = '';
+				html[html.length] = '<th nowrap="1" id="thCol_'+(c+1)+'_'+this.index+'" class="dynaGridColumn"'+' onclick="zenPage.getComponent('+this.index+').columnLabelHandler('+(c+1)+');">' + data + '</th>';
+			}
+			html[html.length] = '</tr>';
+		}
+
+		// data: D1(rows) D2(cols)
+		for (var r = 0; r < dataSet.getDimSize(1); r++) {
+			var rinfo = this.getRowInfo(r);
+			if (rinfo && rinfo.hidden) continue;
+
+			var rstyle = (null!=rinfo&&null!=rinfo.style) ? rinfo.style : '';
+			var rtip = (null!=rinfo&&null!=rinfo.title) ? rinfo.title : '';
+			var rro = (null!=rinfo&&null!=rinfo.readOnly) ? rinfo.readOnly : false;
+			var rhgt = (null!=rinfo&&null!=rinfo.height) ? (''!=rinfo.height?' height="'+rinfo.height+'"':'') : '';
+			html[html.length] = '<tr'+rhgt+'>';
+
+			// label
+			if (this.showRowLabels) {
+				var data = dataSet.getLabel(r,1);
+				data = ('' == data) ? '&nbsp;' : data;
+				html[html.length] = '<th nowrap="1" id="thRow_'+(r+1)+'_'+this.index+'" class="dynaGridRow"'+' onclick="zenPage.getComponent('+this.index+').rowLabelHandler('+(r+1)+');">' + data + '</th>';
+			}
+
+			for (var c = 0; c < cols; c++) {
+				var cinfo = this.getColumnInfo(c);
+				if (cinfo && cinfo.hidden) continue;
+
+				var tdstyle = rstyle;
+				var tdtip = rtip;
+				var cro = (null!=cinfo) ? cinfo.readOnly : false;
+				if (null!=cinfo) {
+					tdstyle += cinfo.style;
+					tdtip = (''!=cinfo.title) ? cinfo.title : tdtip;
+				}
+				if ('' != tdstyle) {
+					tdstyle = ' style="'+tdstyle+'"';
+				}
+				if ('' != tdtip) {
+					tdtip = ' title="'+tdtip+'"';
+				}
+
+				var events = ' onclick="zenPage.getComponent('+this.index+').cellClickHandler('+(r+1)+','+(c+1)+');" ondblclick="zenPage.getComponent('+this.index+').cellDblClickHandler('+(r+1)+','+(c+1)+');"'
+				var data = dataSet.getData(r,c,this.currPage-1);
+				data = this.getCellContents(data,r+1,c+1);
+				var cls = (this.currRow == (r+1) && this.currColumn == (c+1)) ? ' class="selected"' : '';
+
+				html[html.length] = '<td nowrap="1" valign="middle"'+tdstyle+tdtip+'>';
+				if (!insertInput) {
+					// insert invisible input to catch key events
+					html[html.length] = '<input type="text" id="'+this.makeId('invisible')+'" style="top:0px;left:0px;position:absolute;border: 0px solid green;width:0;height:0;" onkeydown="zenPage.getComponent('+this.index+').gridKeyDownHandler(event);" onkeypress="zenPage.getComponent('+this.index+').gridKeyPressHandler(event);" onfocus="zenPage.getComponent('+this.index+').gridKeyFocus();" onblur="zenPage.getComponent('+this.index+').gridKeyBlur();"/>';
+					var insertInput=true;
+				}
+				html[html.length] = '<div id="td_'+(r+1)+'_'+(c+1)+'_'+this.index+'" '+events+cls+'>'+data+'</div>';
+				html[html.length] = '</td>';
+			}
+			html[html.length] = '</tr>';
+		}
+	}
+
+	html[html.length] = '</table>';
+	//alert(html.join(''));
+	
+	encDiv.innerHTML = html.join('');
+	this.adjustSizes();
+]]></Implementation>
+</Method>
+
+<Method name="setCellValue">
+<Description>
+Set the value of grid cell; Row and column are 1-based.</Description>
+<FormalSpec>value,r,c</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var dataSet = this.getDataSet();
+	var configSet = this.getConfigSet();
+	
+	var type=configSet.getLabel(c-1,2)
+	
+	if (!zenIsMissing(dataSet)) {
+		
+		switch(type)
+		{
+			case "2":
+				value=this.NormalizeDate(value);
+			break;
+					
+			case "6":
+				value=this.NormalizeTime(value);
+			break;					
+										
+			default:
+			break;
+		}		
+		
+		dataSet.setData(value,r-1,c-1,this.currPage-1);
+
+		// if there is a controller, notify it
+		var controller = this.getController();
+		if (controller) {
+			// note: series # is 1-based
+			this.sendEventToController('propertyChange',controller.getPropertyName(r-1),value,c);
+		}
+	}
+
+	var div = this.findElement("td_"+r + "_" + c);
+	if (div) {
+		value = this.getCellContents(value,r,c);
+		div.innerHTML = value;
+	}
+]]></Implementation>
+</Method>
+</Class>
+</Export>

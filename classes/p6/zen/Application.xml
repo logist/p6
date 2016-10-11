@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.Application">
+<Description>
+Superclass for prototype 5 application</Description>
+<Super>%ZEN.application</Super>
+<TimeCreated>60852,67076.218849</TimeCreated>
+
+<Parameter name="APPLICATIONNAME">
+<Description>
+This is the name of this application.</Description>
+<Default>Prototype 5 application</Default>
+</Parameter>
+
+<Parameter name="HOMEPAGE">
+<Description>
+This is the URL of the main starting page of this application.</Description>
+</Parameter>
+
+<XData name="Style">
+<Description>
+This Style block contains application-wide CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+/* @doc="Input box " */
+input {
+        vertical-align: middle;
+        border: 1px solid black;
+        padding-left:3px;
+}
+</style>
+]]></Data>
+</XData>
+
+<Method name="%OnNew">
+<Description>
+Init Session on application create</Description>
+<FormalSpec>initvalue:%CacheString</FormalSpec>
+<Private>1</Private>
+<ProcedureBlock>1</ProcedureBlock>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	if $data(%session.Data("SessionId")) set Session=##class(admin.Session).%OpenId(%session.Data("SessionId"))
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnClose">
+<Description>
+Drop Session</Description>
+<Private>1</Private>
+<ProcedureBlock>1</ProcedureBlock>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	kill Session
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

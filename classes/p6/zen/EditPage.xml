@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.EditPage">
+<Description>
+Страница редактирования</Description>
+<Super>p6.zen.Page</Super>
+<TimeCreated>60855,62991.518863</TimeCreated>
+
+<Parameter name="APPLICATION">
+<Description>
+Class name of application this page belongs to.</Description>
+<Default>p6.zen.Application</Default>
+</Parameter>
+
+<Parameter name="PAGENAME">
+<Description>
+Displayed name of this page.</Description>
+</Parameter>
+
+<Parameter name="DOMAIN">
+<Default>DIMAS</Default>
+</Parameter>
+
+<Property name="StdTitle">
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>..#PAGENAME</InitialExpression>
+</Property>
+
+<Property name="objectId">
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="Id"/>
+</Property>
+
+<XData name="Style">
+<Description>
+This Style block contains page-specific CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+#title {
+	background: #CCDDCC;
+	color: #444;
+	font-family: Verdana;
+	font-size: 1.2em;
+	font-weight: bold;
+	padding: 5px;
+	border-bottom: 1px solid #999;
+	text-align: center;
+}
+body {
+	background-color: white;
+	background-image: url(p6/images/bg_gray.jpg);
+}
+fieldset {
+	background-color: #fafafa;
+	background-repeat: repeat-x;
+	background-x-position: center;
+	background-y-position: top;
+	background-image: url(p6/images/bgGrayForm.gif);
+	font-size:0.8em;
+	font-weight: bold;
+	color:#336;
+}
+label {
+	background-color: #fafafa;
+	color:#336;
+	font-size:0.8em;
+}
+.vtLabelLeft {
+	width:1%;
+}
+input {
+	border: 1px solid #999999;
+	font-size: 1em;
+}
+button, .button, .textRefBookButton {
+	background-repeat: repeat-x;
+	background-x-position: center;
+	background-y-position: bottom;	
+	border: 1px solid #999999;
+	background-image: url(p6/images/bgGray.gif);
+	font-size: 1em;
+}
+button:hover, .button:hover {
+	background-image: url(p6/images/bgGrayForm.gif);
+	background-repeat: repeat-x;
+	background-x-position: center;
+	background-y-position: top;
+	color:red;
+}
+button:focus, .button:focus {
+	background-image: url(p6/images/bgGray.gif);
+	background-repeat: repeat-x;
+	background-x-position: center;
+	background-y-position: top;
+	color:red;
+}
+input:active {
+	border: 1px solid red;
+}
+.zenLabel {
+	color: #444;
+	font-size:0.8em;
+}
+.tnbrTable {
+	background:#9DB9C8;
+}
+</style>
+]]></Data>
+</XData>
+
+<XData name="Contents">
+<Description>
+This XML block defines the contents of this page.</Description>
+<XMLNamespace>http://www.intersystems.com/zen</XMLNamespace>
+<Data><![CDATA[
+<page xmlns="http://www.intersystems.com/zen" xmlns:p6="http://www.dimas.ru/p6" title="#(%page.StdTitle)#" width="100%"
+  align="center" >
+<html OnDrawContent="DrawTitle" id="title" />
+<spacer height="20"/>
+<pane id="editPane" align="center" paneName="editPane" width="100%" containerStyle="padding:0.5em;" />
+</page>
+]]></Data>
+</XData>
+
+<Method name="DrawTitle">
+<Description>
+Draw HTML for the page title</Description>
+<FormalSpec>pSeed:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#; Whatever HTML we render here will be used as the title bar
+	&html<#($ZCVT($$$ZENVAL(..#PAGENAME),"O","HTML"))#>
+
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnAfterCreatePage">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ..%GetComponentById("editPane").align="center"
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

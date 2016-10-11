@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.tabGroup">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.tabGroup</Super>
+<TimeCreated>60852,70980.044288</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Property name="isShowTabs">
+<Type>%ZEN.Datatype.boolean</Type>
+</Property>
+
+<Method name="%DrawHTML">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set formId=..%GetForm().id
+	if (..%GetForm().%controller.modelId="")&&('..isShowTabs) {
+		&html<<button id="#(..%MakeId("save_and_show"))#" onclick="zenPage.getComponent(#(..index)#).btSaveAndShow('#(..%GetForm().id)#')">Сохранить и показать кнопки</button>>
+		quit $$$OK
+	}
+	do ##super()
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%GetForm">
+<Description>
+Server-side method.
+Find the form object that this control belongs to.
+Return "" if there is no form.</Description>
+<ReturnType>%ZEN.Component.form</ReturnType>
+<Implementation><![CDATA[
+	Set tForm = ""
+	Set tParent = ..parent
+	While ($IsObject(tParent)) {
+		If (tParent.%IsA("%ZEN.Component.form")) {
+			Set tForm = tParent
+			Quit
+		}
+		Set tParent = tParent.parent
+	}
+	Quit tForm
+]]></Implementation>
+</Method>
+
+<Method name="btSaveAndShow">
+<FormalSpec>formId</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var form = zenPage.getComponentById(formId);
+	if (form.save()) {
+		this.isShowTabs=true;
+		zenPage.objectId=form.controller.modelId;
+		zenPage.refreshContents(true);
+	}
+]]></Implementation>
+</Method>
+</Class>
+</Export>

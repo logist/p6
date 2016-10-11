@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.GroupEdit">
+<Super>p6.zen.EditPage</Super>
+<TimeCreated>60948,56226.877336</TimeCreated>
+
+<Parameter name="PAGENAME">
+<Default>Редактирование группы</Default>
+</Parameter>
+
+<Property name="linkClass">
+<Description>
+Класс линков</Description>
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="LinkClass"/>
+</Property>
+
+<Property name="propertys">
+<Description>
+Свойства через "_"  которые показываются в таблице</Description>
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>"Aka"</InitialExpression>
+<Parameter name="ZENURL" value="Props"/>
+</Property>
+
+<Property name="propertysDef">
+<Description>
+Подписи свойств через "_", если нужно подпись свойство по умолчанию то просто 2 символа "_" на том месте</Description>
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="PropsDef"/>
+</Property>
+
+<Property name="objInGroup">
+<Description>
+Класс объектов в группе</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="groupClass">
+<Description>
+Класс групп</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<XData name="Style">
+<Data><![CDATA[
+<style type="text/css">
+</style>
+]]></Data>
+</XData>
+
+<XData name="editPane">
+<XMLNamespace>http://www.intersystems.com/zen</XMLNamespace>
+<Data><![CDATA[
+<pane width="100%" xmlns="http://www.intersystems.com/zen" xmlns:p6="http://www.dimas.ru/p6" id="editPane">
+<p6:dataController id="source"
+ modelClass="ent.EntityGroup" modelId="#(%url.Id)#"/>
+<form  width="100%" id="myForm" layout="vertical" controllerId="source">
+<p6:text dataBinding="Aka" size="20" />
+<p6:textRefBook dataBinding="ParentGroup" size="20" />
+<p6:textRefBook dataBinding="UserSys" size="20" hidden="true" />
+
+<hgroup>
+ <p6:tablePane id="notInGroup" valign="top"
+	caption="Объекты не входящие в группы" 
+	useSnapshot="true"
+	showRowSelector="false"
+	width="50%" nowrap="false"
+	valueColumn="ID"
+	height="100"
+	dataSource="query"
+	orderByClause="Aka">
+<p6:column colName="ID" hidden="true" />
+</p6:tablePane>
+
+<vgroup cellStyle="padding:0.2em;" valign="top">
+<button caption="&gt;" onclick="zenPage.add()"></button>
+<button caption="&lt;" onclick="zenPage.remove()"></button>
+</vgroup>
+
+<p6:tablePane width="50%" valign="top"
+	id="inGroup"
+    caption="Объекты входящие в группы"
+	showRowSelector="false"
+	valueColumn="ID"
+	height="100"
+	dataSource="query">
+  <p6:column colName="ID" hidden="true" />
+</p6:tablePane>
+</hgroup>
+<p6:buttonsEdit />
+</form>
+</pane>
+]]></Data>
+</XData>
+
+<Method name="add">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var linkId=zenPage.getComponentById('notInGroup').getValue();
+	if(linkId!="")
+	{
+		zenPage.AddObjToGroup(linkId);
+		zenPage.getComponentById('notInGroup').executeQuery();
+		zenPage.getComponentById('inGroup').executeQuery();
+	}else
+	{
+		alert("Выберите объект!");
+	}
+]]></Implementation>
+</Method>
+
+<Method name="AddObjToGroup">
+<FormalSpec>aObjId:%String</FormalSpec>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	set class=..linkClass
+	quit $zobjclassmethod(class,"Create",..objectId,aObjId,..%GetComponentById("UserSys").value)
+]]></Implementation>
+</Method>
+
+<Method name="remove">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var linkId=zenPage.getComponentById('inGroup').getValue();
+	if(linkId!="")
+	{
+		zenPage.RemoveObjFromGroup(linkId);
+		zenPage.getComponentById('notInGroup').executeQuery();
+		zenPage.getComponentById('inGroup').executeQuery();
+	}else
+	{
+		alert("Выберите объект!");
+	}
+]]></Implementation>
+</Method>
+
+<Method name="RemoveObjFromGroup">
+<FormalSpec>aObjId:%String</FormalSpec>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	set class=..linkClass
+	quit $zobjclassmethod(class,"%OnDeleteSource",aObjId)
+]]></Implementation>
+</Method>
+
+<Method name="%OnAfterCreatePage">
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ..%GetComponentById("editPane").align="center"
+	set ..objInGroup=##class(p6.ClassDefinition).GetPropertyType(..linkClass,"Entity")
+	set ..groupClass=##class(p6.ClassDefinition).GetPropertyType(..linkClass,"EntityGroup")	
+	
+	set notInGroupRefBook=..%GetComponentById("notInGroup")
+	set inGroupRefBook=..%GetComponentById("inGroup")
+	
+	set notInGroupRefBook.tableName  =..objInGroup
+	set notInGroupRefBook.whereClause="Id not in (select Entity from "_..linkClass_" where (EntityGroup->ID='"_..objectId_"' or ('"_..objectId_"' is null)))"
+	
+	set inGroupRefBook.tableName  =..linkClass
+	set inGroupRefBook.whereClause="(EntityGroup->ID='"_..objectId_"' or ('"_..objectId_"' is null))"
+	
+	for i=1:1:$LENGTH(..propertys,"_")
+	{
+		set prop=$PIECE(..propertys,"_",i)
+		set col=##class(p6.zen.auxiliary.column).%New()
+		set col.field=prop
+		if ($PIECE(..propertysDef,"_",i)="") {
+			set col.header=##class(p6.ClassDefinition).GetPropertyCaption(..objInGroup,prop)
+		}else {
+			set col.header=$PIECE(..propertysDef,"_",i)
+		}
+		do ..%AddComponent(col)
+		do notInGroupRefBook.columns.Insert(col)
+		
+		set col=##class(p6.zen.auxiliary.column).%New()
+		set col.field="Entity->"_prop
+		if ($PIECE(..propertysDef,"_",i)="") {
+			set col.header=##class(p6.ClassDefinition).GetPropertyCaption(..objInGroup,prop)
+		}else {
+			set col.header=$PIECE(..propertysDef,"_",i)
+		}
+		do ..%AddComponent(col)
+		do inGroupRefBook.columns.Insert(col)
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="22">
+<Class name="p6.zen.component.textarea">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.textarea</Super>
+<TimeCreated>60852,69236.937932</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Method name="%OnAddToPageAfter">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if ..label="" {
+		set form=..%GetForm()
+		set className=form.%controller.modelClass
+		set ..label=##class(p6.ClassDefinition).GetPropertyCaption(className,..dataBinding)
+	}
+	if ..id="" {
+		set ..id=$tr(..dataBinding,"%.()","____")
+	}
+	if ..name="" {
+		set ..name=..id
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

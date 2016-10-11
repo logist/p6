@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.page.LogObject">
+<Description>
+Show object log</Description>
+<Super>%ZEN.Component.page</Super>
+<TimeCreated>60898,38512.107563</TimeCreated>
+
+<Parameter name="APPLICATION">
+<Description>
+Class name of application this page belongs to.</Description>
+<Default>zui.Application</Default>
+</Parameter>
+
+<Parameter name="DOMAIN">
+<Description>
+Domain used for localization.</Description>
+<Default>P6</Default>
+</Parameter>
+
+<Property name="className">
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="ClassName"/>
+</Property>
+
+<Property name="objectId">
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="Id"/>
+</Property>
+
+<XData name="Contents">
+<Description>
+This XML block defines the contents of this page.</Description>
+<XMLNamespace>http://www.intersystems.com/zen</XMLNamespace>
+<Data><![CDATA[
+<page xmlns="http://www.intersystems.com/zen" xmlns:p6="http://www.dimas.ru/p6" >
+<html align="center"><b>Сводка изменений для #(%page.className)# Id=#(%page.objectId)#</b></html>
+<p6:tablePane id="table"
+	showRowSelector="false"
+	width="100%" nowrap="false"
+	height="100"
+	useSnapshot="true"
+	maxRows="0"
+	valueColumn="ID"
+	showQuery="false"
+	showZebra="true"
+	showFilters="true"
+	useKeys="true"
+	headerLayout="headersOnTop"
+	dataSource="query"
+	tableName="admin.LogObject"
+	whereClause="Class='#(%page.className)#' and ObjectId='#(%page.objectId)#'"
+>
+<p6:column header="Дата" colName="DtLog" />
+<p6:column header="Пользователь" colName="UserSysAka" colExpression="UserSys->Aka"  />
+<p6:column header="Метод" colName="Method" />
+</p6:tablePane>
+</page>
+]]></Data>
+</XData>
+</Class>
+</Export>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="9" zv="Cache for Windows NT (Intel/P4) 5.0.15 (Build 5802)" ts="2005-08-25 17:03:49">
+<Class name="p6.Hint">
+<Description>
+Подсказки по полям. Название поля должно быть алфавитно-цифровым, без пробелов и точек.
+Активируется указанием p6Hint в строке. Если p6Hint="", то в качестве значени Field
+берется имя поля для подсказки.</Description>
+<ClassType>persistent</ClassType>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>p6.Integrity</Super>
+<TimeChanged>60137,61427.743693</TimeChanged>
+<ClassDefinitionError>0</ClassDefinitionError>
+
+<Parameter name="SecureType">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="CAPTION">
+<Default>Подсказка</Default>
+</Parameter>
+
+<Property name="Field">
+<Type>%String</Type>
+<Required>1</Required>
+<Parameter name="CAPTION" value="Поле для подсказки"/>
+</Property>
+
+<Property name="Hint">
+<Type>%String</Type>
+<Required>1</Required>
+<Parameter name="CAPTION" value="Подсказкаа"/>
+<Parameter name="MAXLEN" value="1000"/>
+</Property>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^p6.HintD</DataLocation>
+<DefaultData>HintDefaultData</DefaultData>
+<IdLocation>^p6.HintD</IdLocation>
+<IndexLocation>^p6.HintI</IndexLocation>
+<StreamLocation>^p6.HintS</StreamLocation>
+<Data name="HintDefaultData">
+<Structure>listnode</Structure>
+<Subscript/>
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>Field</Value>
+</Value>
+<Value name="3">
+<Value>Hint</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+<Checksum value="1349421431"/>
+</Export>

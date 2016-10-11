@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.text">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.text</Super>
+<TimeCreated>60852,69236.937932</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<XData name="Style">
+<Data><![CDATA[
+<style type="text/css">
+input.text {
+	margin-top:0.2em;
+	margin-bottom:0.2em;
+}
+</style>
+]]></Data>
+</XData>
+
+<Method name="%OnAddToPageAfter">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set form=..%GetForm()
+	set className=form.%controller.modelClass
+	if ..label="" {
+		set ..label=##class(p6.ClassDefinition).GetPropertyCaption(className,..dataBinding)
+	}
+	
+	set propType=##class(p6.ClassDefinition).GetPropertyType(className,..dataBinding)
+	if propType="p6.dt.Time" {
+		set ..clientType="clock"
+	}	
+	
+	if ..id="" {
+		set ..id=$tr(..dataBinding,"%.()","____")
+	}
+	if ..name="" {
+		set ..name=..id
+	}
+
+	if (..size="")&&(..width="") {
+		set ..width="100%"
+	}
+	if ..size="" {
+		set ..controlStyle="width:100%;"_..controlStyle
+	}
+	set ..enclosingStyle="width:90%"
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="NormalizeTime">
+<CodeMode>expression</CodeMode>
+<FormalSpec>aTime:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[##class(p6.dt.Time).LogicalToDisplay(##class(p6.dt.Time).DisplayToLogical(aTime))
+]]></Implementation>
+</Method>
+
+<Method name="onchangeHandler">
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	// force HTML value into value property
+	var value = this.getValue();
+
+	// notify our form of the change
+	var form = this.getForm();
+	if (form) {
+		form.controlChangeHandler(this);
+	}
+
+	if(this.clientType=='clock') this.setValue(this.NormalizeTime(value));
+	
+	// if we are invalid, see if new value makes us valid
+	if (this.invalid && this.validationHandler()) {
+		this.setProperty('invalid',false);
+	}
+
+	// call user event handler 
+	zenInvokeCallbackMethod(this.onchange,this,'onchange');
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="9" zv="Cache for Windows NT (Intel/P4) 5.0.8 (Build 5105)" ts="2004-12-09 14:41:16">
+<Class name="p6.ParentClassUtils">
+<Super>%RegisteredObject</Super>
+<TimeChanged>59878,52875.352786</TimeChanged>
+<TimeCreated>59071,68814</TimeCreated>
+<ClassDefinitionError>0</ClassDefinitionError>
+
+<Method name="OnParentDelete">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>parentObjectId:%Library.String="",parentClassName:%String="",childClassName:%String="",parentPropertyName:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ new lines, i, sc
+
+ set sc = $$$OK
+ set lines = ##class(p6.ClassUtils).GetListOfProperty(childClassName, "Id", parentPropertyName_"="_parentObjectId)
+ xecute "new isIn"_$translate(parentClassName,".","")_"Delete"
+ xecute "set isIn"_$translate(parentClassName,".","")_"Delete = 1"
+ for i=1:1:$listlength(lines)
+ {
+ xecute "set sc = ##class("_childClassName_").DeleteId($list(lines,i))"
+ if ($$$ISERR(sc)) quit
+ }
+ quit sc
+]]></Implementation>
+</Method>
+</Class>
+<Checksum value="649839551"/>
+</Export>

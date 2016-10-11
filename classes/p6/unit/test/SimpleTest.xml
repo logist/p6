@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-04 13:28:21">
+<Class name="p6.unit.test.SimpleTest">
+<ClassType/>
+<IncludeCode>UnitTest</IncludeCode>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>p6.unit.TestCase</Super>
+<TimeCreated>59508,53089.535074</TimeCreated>
+
+<Method name="TestOK">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="TestAssertOK">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	$$$AssertStatusOK($$$OK,"Should always pass")
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="DontTestAssertFailed">
+<Description>
+Delete "Dont" prefix from method name to get an error</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	$$$AssertEquals(15,$h,"15 should equal to $h?")
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="DontTestException">
+<Description>
+Delete "Dont" prefix from method name to get an error</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	zt  ; throw an exception
+	do ..Fail(10000,"Exception dont work")
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

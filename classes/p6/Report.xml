@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.Report">
+<Description>
+Класс, задающий параметры отчетов. 
+По каждому пользователю хранятся выбранные ранее значения
+и потом подсказываются при инициализации объекта</Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>60128,45738.430749</TimeCreated>
+
+<Parameter name="SAVEPROPERTY">
+<Description>
+Перечислить поля для сохранения через ~1~2~3~4~. </Description>
+</Parameter>
+
+<Method name="%OnNew">
+<FormalSpec>param</FormalSpec>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if $get(Session)="" quit $$$OK
+	set userSysId=Session.UserSys.%Id()
+	set saveProperty=..#SAVEPROPERTY
+	set ClassDef=##class(%Dictionary.CompiledClass).%OpenId(%this.%ClassName(1))
+	for i=1:1:ClassDef.Properties.Count() {
+		set Prop=ClassDef.Properties.GetAt(i)
+		if Prop.MultiDimensional continue
+		if (saveProperty]"")&&(saveProperty'[("~"_Prop.Name_"~")) continue
+		set val=##class(admin.Memory).Get(%this.%ClassName(1)_"||"_Prop.Name,userSysId)
+		if val]"" { 
+			set Type=##class(%Dictionary.CompiledClass).%OpenId(Prop.Type)
+			if Type.ClassType="datatype" {
+				set $zobjproperty(%this,Prop.Name)=val
+			} elseif Type.ClassType="persistent" {
+				set $zobjproperty(%this,Prop.Name)=$zobjclassmethod(Type.Name,"%OpenId",val)
+			}
+		} 
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnClose">
+<FormalSpec>param</FormalSpec>
+<PublicList>Session</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if $get(Session)="" quit $$$OK
+	set userSysId=Session.UserSys.%Id()
+	set ClassDef=##class(%Dictionary.CompiledClass).%OpenId(%this.%ClassName(1))
+	for i=1:1:ClassDef.Properties.Count() {
+		set Prop=ClassDef.Properties.GetAt(i)
+		if Prop.MultiDimensional continue
+		set Type=##class(%Dictionary.CompiledClass).%OpenId(Prop.Type)
+		if Type.ClassType="datatype" {
+			set val=$zobjproperty(%this,Prop.Name)
+			do ##class(admin.Memory).Put(val,%this.%ClassName(1)_"||"_Prop.Name,userSysId)
+		} elseif Type.ClassType="persistent" {
+			set PropVal=$zobjproperty(%this,Prop.Name)
+			if PropVal]"" set val=$zobjmethod(PropVal,"%Id")
+			else  set val=""
+			do ##class(admin.Memory).Put(val,%this.%ClassName(1)_"||"_Prop.Name,userSysId)
+
+		}
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="GetHorolog">
+<Description>
+Преобразование строки в формате $horolog в строку DD.MM.YY HH:MM
+  (обычно для печати отчета)</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aHorolog:%String=$horolog</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (aHorolog="") { quit "" } //#
+ set date=##class(p6.dt.Date).LogicalToDisplay($piece(aHorolog,",",1))
+ set time=##class(p6.dt.Time).LogicalToDisplay($piece(aHorolog,",",2))
+ quit (date_" "_time)
+]]></Implementation>
+</Method>
+
+<Method name="GetPeriod">
+<Description>
+Расшифровка периода в строку для отчета</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aDateBegin:p6.dt.Date="",aDateEnd:p6.dt.Date=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if ((aDateBegin="") && (aDateEnd="")) { quit "Период не задан" } //#
+	set str = "Период "
+	if (aDateBegin]"") { set str =str_"с "_##class(p6.dt.Date).LogicalToDisplay(aDateBegin)
+		if (aDateEnd="") { quit str } //#
+		set str = str_" по "_##class(p6.dt.Date).LogicalToDisplay(aDateEnd) quit str //#
+	}
+	set str =str_"по "_##class(p6.dt.Date).LogicalToDisplay(aDateEnd)
+	quit str
+]]></Implementation>
+</Method>
+
+<Method name="GetPeriodAndHorolog">
+<Description>
+Период + время печати в одну строку для отчета</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aDateBegin:p6.dt.Date="",aDateEnd:p6.dt.Date=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	set str = ..GetPeriod(aDateBegin,aDateEnd)_"."
+	set str = str_"   Напечатано "_..GetHorolog()_"."
+	quit str
+]]></Implementation>
+</Method>
+</Class>
+</Export>

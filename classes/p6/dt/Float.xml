@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.dt.Float">
+<Description><![CDATA[
+The <b>%Float</b> data type class represents a floating point number.
+<p>The logical value of the <b>%Float</b> data type is a floating point value.]]></Description>
+<IncludeGenerator>%occInclude,%occUtility</IncludeGenerator>
+<Super>%Float</Super>
+<TimeCreated>59795,47893.706967</TimeCreated>
+
+<Method name="DisplayToLogical">
+<Description><![CDATA[
+Converts the input value <var>%val</var>, which is a string representing a floating point value,
+into a logical floating point value.
+<p>Returns the logical floating point value of the input string <var>%val</var>.]]></Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>generator</CodeMode>
+<FormalSpec>%val:%String</FormalSpec>
+<ReturnType>%Float</ReturnType>
+<Implementation><![CDATA[
+ s %code=0
+ $$$GENERATE(" if '(%val?.1""-"".N.1""."".1"","".N) set %objlasterror=$system.Status.Error(10000,""Номер введен неверно"")")
+ i %parameter("VALUELIST")'="",%parameter("DISPLAYLIST")'="" d  QUIT $$$OK
+ . s sep=$e(%parameter("DISPLAYLIST"))
+ . s len=$l(%parameter("DISPLAYLIST"),sep)
+ . f i=2:1:$l(%parameter("DISPLAYLIST"),sep) $$$GENERATE(" q:%val="_$$quote($p(%parameter("DISPLAYLIST"),sep,i))_" "_$$quote($p(%parameter("VALUELIST"),sep,i)))
+ . $$$GENERATE(" q """"")
+ $$$GENERATE(" quit $in($tr(%val,"", "","".""),"""_%parameter("FORMAT")_""","""")")
+ QUIT $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="LogicalToDisplay">
+<Description><![CDATA[
+Converts the value of <var>%val</var>, which is in logical floating point format, into a display string.
+The formatting is based on the value of the <a href="#FORMAT">FORMAT</a> parameter.
+<p>Returns the formatted value of <var>%val</var>.]]></Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec>%val:%Float</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[$s($e(%val)=".":0_%val,1:%val)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

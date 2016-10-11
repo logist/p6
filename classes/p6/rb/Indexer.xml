@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.rb.Indexer">
+<Description>
+Построение индексов</Description>
+<Super>%RegisteredObject</Super>
+<TimeCreated>60463,67705.959059</TimeCreated>
+
+<Method name="Run">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	kill ^p6.rb.Index
+	set class="&" // Пропустить процентованные классы
+	for {
+		set class=$$$comClassNext(class)
+		if class="" quit
+		if "csp~csr~p6.~adm"[$e(class,1,3) continue
+		do ..AddLink("Class "_class,class)
+
+		set property="&"
+		for {
+			set property=$$$comMemberNext(class,$$$cCLASSproperty,property)
+			if property="" quit
+			do ..AddLink("Class "_class_", property "_property,property)
+		}
+
+		set method="&"
+		for {
+			set method=$$$comMemberNext(class,$$$cCLASSmethod,method)
+			if method="" quit
+			/// пропускаем методы, сгенерированные для свойств
+			if '$$$defMemberKeyGet(class,$$$cCLASSmethod,method,$$$cMETHsequencenumber) continue
+			do ..AddLink("Class "_class_", method "_method,method)
+		}
+	}
+
+
+	/// Второй проход - добавляем ссыылки в тело методов
+	set class="&" // Пропустить процентованные классы
+	for {
+		set class=$$$comClassNext(class)
+		if class="" quit
+		if "csp~csr"[$e(class,1,3) continue
+		set method="&"
+		for {
+			set method=$$$comMemberNext(class,$$$cCLASSmethod,method)
+			if method="" quit
+			/// пропускаем методы, сгенерированные для свойств
+			if '$$$defMemberKeyGet(class,$$$cCLASSmethod,method,$$$cMETHsequencenumber) continue
+
+			for i=1:1:$$$defMemberKeyGet(class,$$$cCLASSmethod,method,$$$cMETHimplementation) {
+				set codeString=$$$defMemberArrayGet(class,$$$cCLASSmethod,method,$$$cMETHimplementation,i)
+				set ident=""
+				for  {
+					set ident=$o(^p6.rb.Index(ident))
+					quit:ident=""
+					if codeString[ident do ..AddLink("Class "_class_", method "_method_" string "_i,ident,codeString)
+				}
+			}
+
+		}
+	}
+
+
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="AddLink">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aLocation,aName,aString=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set idents=..GetIdents(aName)
+	for i=1:1:$ListLength(idents) {
+		set ident=$ListGet(idents,i)
+		set next=$increment(^p6.rb.Index(ident))
+		set ^p6.rb.Index(ident,next)=aLocation
+		if aString]"" set ^p6.rb.Index(ident,next,"string")=aString
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="GetIdents">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aStr:%String</FormalSpec>
+<ReturnType>%List</ReturnType>
+<Implementation><![CDATA[
+	set idents=""
+	if ("aq"[$e(aStr))&&("QWERTYUIOPASDFGHJKLZXCVBNM"[$e(aStr,2)) {
+		set $e(aStr)=""
+	}
+	for {
+		quit:aStr=""
+		set foundTag=$e(aStr),$e(aStr)=""
+		for {
+			quit:(aStr="")||("QWERTYUIOPASDFGHJKLZXCVBNM"[$e(aStr))
+			set foundTag=foundTag_$e(aStr),$e(aStr)=""
+		}
+		set idents=idents_$ListBuild(foundTag)
+	}
+	quit idents
+]]></Implementation>
+</Method>
+</Class>
+</Export>

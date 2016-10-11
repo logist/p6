@@ -1,0 +1,613 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.ReportPage">
+<Description><![CDATA[
+Represents a Report within a ZEN application.
+This is the base class used for all user reports.<br>
+Note that a report is <em>not</em> a ZEN page; all logic
+for a report is executed on the server. The client is sent
+the final output for viewing and printing.]]></Description>
+<Abstract>1</Abstract>
+<PropertyClass>%ZEN.Report.reportParameters</PropertyClass>
+<Super>%RegisteredObject,%CSP.Page</Super>
+<TimeCreated>60120,67070.962093</TimeCreated>
+
+<Parameter name="CONTENTTYPE">
+<Default>text/xml</Default>
+</Parameter>
+
+<Parameter name="REPORTNAME">
+<Description>
+This is the logical name of this report.
+If not provided, class name is used.</Description>
+<Type>STRING</Type>
+</Parameter>
+
+<Parameter name="REPORTXMLNAMESPACE">
+<Description>
+If provided, this is the XML namspace that will be used
+for the generated XML report.</Description>
+<Type>STRING</Type>
+</Parameter>
+
+<Parameter name="DEFAULTMODE">
+<Description><![CDATA[
+Specifies the default display mode used for this report if
+the URL parameter, <var>$MODE</var>, is not present.]]></Description>
+<Type>STRING</Type>
+<Constraint>,odf,html,doc,xls,pdf,xml</Constraint>
+<Default>xml</Default>
+<Flags>ENUM</Flags>
+</Parameter>
+
+<Parameter name="DATASOURCE">
+<Description>
+If defined, this provides a reference to the external
+XML data to use in generating the report. If it is
+not provided, data will be generated from the
+ReportDefinition XData block.</Description>
+<Type>String</Type>
+</Parameter>
+
+<Parameter name="TEMPLATE">
+<Description>
+This provides a reference to the external
+OpenOffice template to use in generating report.</Description>
+<Type>String</Type>
+</Parameter>
+
+<Parameter name="APPLICATION">
+<Description><![CDATA[
+This is the class name of this application this report belongs to.<br>
+If not defined, this report does not belong to an application.<br>
+Currently, the application does not bestow any behavior to the report;
+it serves merely as a way to document that a report is associated with
+an application.]]></Description>
+<Type>CLASSNAME</Type>
+</Parameter>
+
+<Property name="Datasource">
+<Description>
+See the DATASOURCE parameter for details.</Description>
+<Type>%String</Type>
+<InitialExpression>..#DATASOURCE</InitialExpression>
+</Property>
+
+<XData name="ReportDefinition">
+<Description>
+XML that defines the contents of this report.</Description>
+</XData>
+
+<Method name="%ApplyURLParms">
+<Description>
+Copy URL parameters supplied to this page into the 
+appropriate properties of this reportPage object.</Description>
+<Final>1</Final>
+<CodeMode>objectgenerator</CodeMode>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	If (%class.Abstract) {
+		Do %code.WriteLine(" Quit $$$OK")
+		Quit $$$OK
+	}
+
+    #; find all properties
+	Do %code.WriteLine(" Set tSC = $$$OK")
+	Do %code.WriteLine(" If $IsObject($G(%request)) {")
+	For n = 1:1:%compiledclass.Properties.Count() {
+		Set tProp = %compiledclass.Properties.GetAt(n)
+		if tProp.Name["%" continue
+		Do %code.WriteLine("  Set data = $G(%request.Data("""_tProp.Name_""",1))")
+		Do %code.WriteLine("  If (data '= """") {")
+		Do %code.WriteLine("   Set .."_tProp.Name_" = .."_tProp.Name_"DisplayToLogical(data)")
+		Do %code.WriteLine("   Set tSC = .."_tProp.Name_"IsValid(.."_tProp.Name_")")
+		Do %code.WriteLine("   If $$$ISERR(tSC) Quit $$$ERROR($$$GeneralError,""Invalid URL parameter: "_tProp.Name_""")")
+		Do %code.WriteLine("  }")
+	}
+	Do %code.WriteLine(" }")
+	Do %code.WriteLine(" Quit tSC")
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnPreHTTP">
+<Description>
+PreHTTP handler.
+Sets content-type and content-dispositon depending
+on $MODE and $LOG</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	If '$IsObject($G(%request)) Quit 1
+
+	do %response.SetHeader("PRAGMA","")
+	do %response.SetHeader("EXPIRES","")
+	do %response.SetHeader("CACHE-CONTROL","")
+
+	Set tMode = $zconvert($G(%request.Data("$MODE",1),..#DEFAULTMODE),"L")
+	Set tDisplayLog = $G(%request.Data("$LOG",1),0)
+	set reportName=$select(..#REPORTNAME]"":..#REPORTNAME,1:..%ClassName(0))
+
+	if ((tMode '= "html")&(tMode '= "xml")&('tDisplayLog)) {
+		if (##class(admin.Session).GetCurrent().UserSys.ReportMode=2) {
+			if ((tMode="odt") || (tMode="doc")){
+				set tMode="odt"
+			}elseif ((tMode="ods") || (tMode="xls"))
+			{
+				set tMode="ods"
+			}
+		}else {
+			if ((tMode="odt") || (tMode="doc")){
+				set tMode="doc"
+			}elseif ((tMode="ods") || (tMode="xls"))
+			{
+				set tMode="xls"
+			}			
+		}
+	}
+
+	#; set header parameters based on $MODE,$LOG
+	If tDisplayLog {
+		Set %response.ContentType = "text/plain"
+		Do %response.SetHeader("content-disposition","filename="_reportName_"Output.txt")
+	} ElseIf (tMode = "html") {
+		Do %response.SetHeader("content-disposition","filename="_reportName_".html")
+	} ElseIf (tMode = "xml") {
+		Set %response.ContentType = "text/xml"
+		Do %response.SetHeader("content-disposition","filename="_reportName_".xml")
+	} Else {
+		Set %response.ContentType = "application/"_tMode
+		Do %response.SetHeader("content-disposition","attachment; filename="_reportName_"."_tMode)
+	}
+
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnPage">
+<Description>
+Render the contents of this ZEN report.</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tSC = $$$OK
+
+	Do {
+		#; default mode is specified by DEFAULTMODE
+		Set tMode = ..#DEFAULTMODE
+		Set tDisplayLog = 0
+		Set tDatasource=""
+
+		If $IsObject($G(%request)) {
+			Set tMode = $zconvert($G(%request.Data("$MODE",1),tMode),"L")
+			Set tDisplayLog = $G(%request.Data("$LOG",1),0)
+			Set tDatasource=$G(%request.Data("$DATASOURCE",1))
+		}
+		
+		if ((tMode '= "html")&(tMode '= "xml")&('tDisplayLog)) {
+			if (##class(admin.Session).GetCurrent().UserSys.ReportMode=2) {
+				if ((tMode="odt") || (tMode="doc")){
+					set tMode="odt"
+				}elseif ((tMode="ods") || (tMode="xls"))
+				{
+					set tMode="ods"
+				}
+			}else {
+				if ((tMode="odt") || (tMode="doc")){
+					set tMode="doc"
+				}elseif ((tMode="ods") || (tMode="xls"))
+				{
+					set tMode="xls"
+				}			
+			}
+		}
+		
+		#; create instance of *this* report
+		Set tUserReport = ..%New()
+
+		#; handle datasource URL parameter
+		If tDatasource'="" {
+			Set tUserReport.Datasource=tDatasource
+		}
+
+		#; copy URL parameters into specially marked properties.
+		Set tSC = tUserReport.%ApplyURLParms()
+		If $$$ISERR(tSC) Quit
+
+		#; invoke callback
+		Set tSC = tUserReport.%OnBeforeReport()
+		If $$$ISERR(tSC) Quit
+
+		#; serve appropriate content based on $MODE query parameter
+		If (tMode = "xml") {
+			#; serve raw xml report data
+			Set tSC = tUserReport.%DrawXML(0)
+		} Else {
+			Set tSC = tUserReport.%DisplayReport(tMode,tDisplayLog)
+		}
+		If $$$ISERR(tSC) Quit
+
+		#; notify that report is complete
+		Set tSC = tUserReport.%OnAfterReport()
+		If $$$ISERR(tSC) Quit
+
+	} While(0)
+	Quit tSC
+]]></Implementation>
+</Method>
+
+<Method name="%RunReport">
+<Description>
+Run the report defined in this class and output the data as XML. 
+This method is automatically generated using the report definition 
+in the XData block "ReportDefinition".</Description>
+<Final>1</Final>
+<CodeMode>objectgenerator</CodeMode>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	If (%class.Abstract) {
+		Do %code.WriteLine(" Quit $$$OK")
+		Quit $$$OK
+	}
+
+	Set tSC = $$$OK
+	Do %code.WriteLine(" Set tSC = $$$OK")
+	Do %code.WriteLine(" Set $ZT = ""Trap""")
+
+	#; find XDATA block named ReportDefinition
+	Set tIndex = %compiledclass.XDatas.FindObjectId(%class.Name_"||ReportDefinition")
+
+	If (tIndex '= "") {
+		#; get XDATA as stream
+		Set tStream = %compiledclass.XDatas.GetAt(tIndex).Data
+		Do tStream.Rewind()
+
+		If (tStream.Size > 0) {
+
+			#; render the stream into report object (with children)
+			Set tReader = ##class(%XML.Reader).%New()
+			Set tSC = tReader.OpenStream(tStream) If $$$ISERR(tSC) Quit tSC
+			Do tReader.Correlate("report","%ZEN.Report.report")
+
+			#; there should only be one report defined
+			Do tReader.Next(.tReport,.tSC)
+			If $$$ISERR(tSC) Quit tSC
+			If '$IsObject(tReport) Quit $$$ERROR($$$GeneralError,"No <report> element defined in ReportDefinition block.")
+
+			#; have report generate code to execute itself at run-time
+			Set depth = 0
+			Set tSC = tReport.%GenerateCode(tReport,%code,0)
+		}
+	}
+	Else {
+		#; if XData did not create a report, return an error.
+		Do %code.WriteLine(" Set tSC = $$$ERROR($$$NotImplemented)")
+	}
+
+	#; exit code
+	Do %code.WriteLine("Done")
+	Do %code.WriteLine(" Quit tSC")
+
+	#; error exit
+	Do %code.WriteLine("Error")
+	Do %code.WriteLine(" Do ..%LogError(tSC)")
+	Do %code.WriteLine(" Quit tSC")
+
+	#; ztrap
+	Do %code.WriteLine("Trap")
+	Do %code.WriteLine(" Set $ZT=""""")
+	Do %code.WriteLine(" Set tSC = $$$ERROR($$$GeneralError,$ZE)")
+	Do %code.WriteLine(" Goto Error")
+
+	Do %code.WriteLine("FieldLookup(field,pLevel,default)")
+	Do %code.WriteLine(" ")
+	Do %code.WriteLine(" Set result=default")
+	Do %code.WriteLine(" For %i=pLevel:-1:0 Do")
+	Do %code.WriteLine(" . Quit:'$d(%query(%i))")
+	Do %code.WriteLine(" . If $d(%query(%i).Data(field)) Set result =%query(%i).Data(field) Quit")
+	Do %code.WriteLine(" Quit result")
+
+	Quit tSC
+]]></Implementation>
+</Method>
+
+<Method name="%DrawXML">
+<Description>
+This method outputs the XML data indicated by the DATASOURCE parameter,
+or %RunReport() if no DATASOURCE is provided.</Description>
+<FormalSpec>stripinstructions:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set datasource=..Datasource
+
+	#; if no datasource, generate data
+	If datasource="" {
+		#; if they want it with instructions, should probably add an XML declaration
+		set io=$$$GETIO
+		$$$SETIO("UTF8")
+		Write:'stripinstructions "<?xml version=""1.0"" encoding=""UTF-8"" ?>",!
+		Set tSC = ..%RunReport()
+		$$$SETIO(io)
+		Quit tSC
+	#; if absolute URL
+	} ElseIf $case($p(datasource,":"),"http":1,"https":1,:0) {
+		Set HttpResponse=..%GetFileByAbsoluteURL(datasource)
+		If $IsObject(HttpResponse) {
+			Do ..%OutputStream(HttpResponse.Data,stripinstructions)
+		} Else {
+			&html<<error>Could not find absolute URL: #(datasource)#</error>>
+		}
+		Quit $$$OK
+	} Else {
+		Set stream=..%GetFileByRelativeURL(datasource)
+		If $IsObject(stream) {
+			Do ..%OutputStream(stream,stripinstructions)
+		} Else {
+			&html<<error>Could not find/open file: #(filelocation)#</error>>
+		}
+		Quit $$$OK
+	}
+]]></Implementation>
+</Method>
+
+<Method name="%DrawTemplate">
+<Description>
+Save report template to temporary place in filesystem</Description>
+<FormalSpec>stripinstructions:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set stylesource=..#TEMPLATE
+
+	#; if no stylesource, generate error
+	If stylesource="" {
+		Quit $$$ERROR()
+	#; if absolute URL
+	} ElseIf $case($p(stylesource,":"),"http":1,"https":1,:0) {
+		Set HttpResponse=..%GetFileByAbsoluteURL(stylesource)
+		If $IsObject(HttpResponse) {
+			Do ..%OutputStream(HttpResponse.Data,stripinstructions)
+		} Else {
+			&html<<error>Could not find absolute URL: #(stylesource)#</error>>
+			Quit $$$ERROR($$$GeneralError,"Could not find absolute URL: "_stylesource)
+		}
+		Quit $$$OK
+	} Else {
+		Set stream=..%GetFileByRelativeURL(stylesource)
+		If $IsObject(stream) {
+			Do ..%OutputStream(stream,stripinstructions)
+		} Else {
+			&html<<error>Could not find relative URL: #(stylesource)#</error>>
+			Quit $$$ERROR($$$GeneralError,"Could not find relative URL: "_stylesource)
+		}
+		Quit $$$OK
+	}
+]]></Implementation>
+</Method>
+
+<Method name="%PerformTransform">
+<Description>
+This method performs the callout to the command line that performs an XSLT
+or XSL-FO to PDF transformation.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>xmlfile:%String,reportfile:%String,outfile:%String,logfile:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	If $d(^%SYS("p6report","transformerpath")) {
+		Set exe="java -jar """_$zu(147,^%SYS("p6report","transformerpath"))_""" "
+	} Else {
+		Quit $$$ERROR($$$GeneralError,"You must set ^%SYS(""p6report"",""transformerpath"") to the location of your jooreports.jar")
+	}
+
+	#; set up command line character to pipe output to a file
+	If $$$isWINDOWS {
+		Set pipechars = "2>>"
+	} ElseIf $$$isUNIX {
+		Set pipechars = ">"
+	} ElseIF $$$isVMS {
+		#; I'm honestly just guessing here
+		Set pipechars = ">"
+	} Else {
+		Set pipechars = ">"
+	}
+
+	Do $zf(-1,exe_" """_reportfile_""" """_xmlfile_""" """_outfile_""" "_pipechars_" """_logfile_"""")
+	s ^a=$zu(147,exe)_" """_reportfile_""" """_xmlfile_""" """_outfile_""" "_pipechars_" """_logfile_""""
+
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%DisplayReport">
+<Description>
+This method outputs the contents of the PDF report  </Description>
+<FormalSpec>aMode:%String,DisplayLog:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tSC=$$$OK
+	Do {
+		#; Generate data file and XSLT stylesheet which transforms data to HTML
+		Set tSC = ..%MakeXMLDataFile(.xmlfile) Quit:$$$ISERR(tSC)
+		Set tSC = ..%MakeToTemplateFile(.xslfile) Quit:$$$ISERR(tSC)
+
+		#; Generate filenames for log/pdf
+		Set tmpdir=##class(%File).NormalizeDirectory(^%SYS("TempDir"))
+		Set logfile = tmpdir_##class(%FileBinaryStream).NewFileName("txt",^%SYS("TempDir"))		
+		Set outfile = tmpdir_##class(%FileBinaryStream).NewFileName(aMode,^%SYS("TempDir"))
+
+		#; Command line callout to FOP
+		Set tSC = ..%PerformTransform(xmlfile, xslfile, outfile, logfile)
+
+		If $$$ISOK(tSC) {
+			If DisplayLog {
+				Set oid = ##class(%CSP.StreamServer).GetOidForFile(logfile)
+			} Else {
+				Set oid = ##class(%CSP.StreamServer).GetOidForFile(outfile)
+			}
+
+			Set stream=##class(%Stream.Object).%Open(oid)
+			Do stream.OutputToDevice()
+		}
+		Do ##class(%File).Delete(xmlfile)
+		Do ##class(%File).Delete(xslfile)
+		Do ##class(%File).Delete(outfile)
+		Do ##class(%File).Delete(logfile)
+	} While (0)
+
+	Quit tSC
+]]></Implementation>
+</Method>
+
+<Method name="%MakeXMLDataFile">
+<Description>
+This method creates a temporary local file that contains
+the XML data indicated by the DATASOURCE parameter or 
+generated by %RunReport if no DATASOURCE is specified.</Description>
+<FormalSpec><![CDATA[&filename:%String]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#; Generate XML to HTML stylesheet
+	Set oldio=$IO
+	Set tmpdir=##class(%File).NormalizeDirectory(^%SYS("TempDir"))
+	Set filename = tmpdir_##class(%FileBinaryStream).NewFileName("xml",^%SYS("TempDir"))
+	Open filename:("NW")
+	Use filename
+	Set tSC = ..%DrawXML(0)
+	Close filename
+	Use oldio
+	Quit tSC
+]]></Implementation>
+</Method>
+
+<Method name="%MakeToTemplateFile">
+<Description>
+This method creates a temporary local copy of the XSLT stylesheet
+used to transform the XML data into XSL-FO.</Description>
+<FormalSpec><![CDATA[&filename:%String]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#; Generate XML to HTML stylesheet
+	Set oldio=$IO
+	Set tmpdir=##class(%File).NormalizeDirectory(^%SYS("TempDir"))
+	Set filename = tmpdir_##class(%FileBinaryStream).NewFileName("odt",^%SYS("TempDir"))
+	Open filename:("NW")
+	Use filename
+	Set tSC = ..%DrawTemplate(0)
+	Close filename
+	Use oldio
+	Quit tSC
+]]></Implementation>
+</Method>
+
+<Method name="%GetFileByRelativeURL">
+<Description>
+This method returns a stream of the contents of the file
+indicated by a relative URL.  The relative URL must indicate
+a file that is actually on disk (i.e. not a .csp for .cls file)</Description>
+<FormalSpec>url:%String</FormalSpec>
+<ReturnType>%Stream.Object</ReturnType>
+<Implementation><![CDATA[
+	If '$d(%request) Quit ""
+	Set thisURL=%request.URL
+
+	#; if it is a .csp or .cls request, cannot use local file
+	If $case($e($p($zstrip(url,"*W"),".",$l(url,".")),1,3),"csp":1,"cls":1,:0) {
+		Set server=%request.GetCgiEnv("SERVER_NAME")
+		Set port=%request.GetCgiEnv("SERVER_PORT",80)
+		Set url=$$CSPNormalizeURL^%SYS.cspServer(url,thisURL)
+		Set absURL="http://"_server_":"_port_url
+		Set HttpResponse=..%GetFileByAbsoluteURL(absURL,.sc) Quit:$$$ISERR(sc) ""
+		Set stream=$s($IsObject(HttpResponse):HttpResponse.Data,1:"")
+	} Else {
+		Set absURL=$$CSPNormalizeURL^%SYS.cspServer(url,thisURL)
+		Set filelocation=$$GetFilename^%apiCSP(absURL)
+		#;Set filelocation=%request.GetCgiEnv("PATH_TRANSLATED")
+		Set oid = ##class(%CSP.StreamServer).GetOidForFile(filelocation)
+		Set stream=##class(%Stream.Object).%Open(oid)
+	}
+	Quit stream
+]]></Implementation>
+</Method>
+
+<Method name="%GetFileByAbsoluteURL">
+<Description>
+This method returns a stream of the contents of the file
+indicated by an absolute URL.</Description>
+<FormalSpec><![CDATA[url:%String,&sc:%Status]]></FormalSpec>
+<ReturnType>%Net.HttpResponse</ReturnType>
+<Implementation><![CDATA[
+	Do ##class(%Net.URLParser).Parse(url,.components)
+	Set HttpReq=##class(%Net.HttpRequest).%New()
+	Set HttpReq.Server=$g(components("host"))
+	Set HttpReq.Port=$g(components("port"),80)
+	Set path=$g(components("path"))_$s($d(components("query")):"?"_components("query"),1:"")
+	Set sc=HttpReq.Get(path)
+	Quit HttpReq.HttpResponse
+]]></Implementation>
+</Method>
+
+<Method name="%OutputStream">
+<Description><![CDATA[
+This method outputs the contents of a stream, and if stripinstructions=1
+it removes anything of the form <? ... ?> from the stream.]]></Description>
+<FormalSpec>xml:%Stream.Object,stripinstructions:%Boolean=0</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set chunksize=32000
+	While 'xml.AtEnd {
+		Set chunk=xml.Read(chunksize)
+		If stripinstructions {
+			While $f(chunk,"<?") {
+				Set beg=$f(chunk,"<?")-3
+				Set end=$f(chunk,"?>",beg)
+				Set chunk=$e(chunk,1,beg)_$e(chunk,end,$l(chunk))
+			}
+		}
+		Write chunk
+	}
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%LogError">
+<Description>
+Log run-time error encountered by this report.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pSC:%Status</FormalSpec>
+<Implementation><![CDATA[
+	Do $System.Status.DecomposeStatus(pSC,.err)
+	Set ^%ISC.ZENREPORTLOG($ZDT($H,3,,3)) = ..%ClassName(1) _ ":" _ $G(err(1))
+]]></Implementation>
+</Method>
+
+<Method name="%OnBeforeReport">
+<Description>
+This callback is invoked after this report is instantiated
+and before it is run.</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnAfterReport">
+<Description>
+This callback is invoked after this report is run
+and before it is closed.</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnReportTag">
+<Description>
+Notification that we are writing out the attributes for the opening tag.</Description>
+<Implementation><![CDATA[
+	#; write out namespace definition for this report.
+	If (..#REPORTXMLNAMESPACE'="") {
+		Write " xmlns="""_..#REPORTXMLNAMESPACE_""""
+	}
+]]></Implementation>
+</Method>
+</Class>
+</Export>

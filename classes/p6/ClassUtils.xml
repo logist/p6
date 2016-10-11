@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.ClassUtils">
+<Description>
+Утилиты обслуживания классов</Description>
+<ClassType/>
+<ProcedureBlock>0</ProcedureBlock>
+<Super>%Library.RegisteredObject</Super>
+<TimeCreated>59071,68808</TimeCreated>
+
+<Parameter name="CAPTION">
+<Default>Утилиты обслуживания классов</Default>
+</Parameter>
+
+<Method name="DisplayValue">
+<Description>
+Возвращает значение свойства открытого объекта orefPropertyName или пусто</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>orefPropertyName:%Library.String="",delimiter:%Library.String=""</FormalSpec>
+<ReturnType>%Library.String</ReturnType>
+<Implementation><![CDATA[
+ if orefPropertyName="" quit ""
+ if delimiter="" set delimiter="-"
+ set $ztrap="ErrorDisplayName"
+ new value, value1, numdel,ff, name
+ set numdel=$length(orefPropertyName,",")
+ set value1=""
+ for ff=1:1:numdel {
+ set name=$piece(orefPropertyName,",",ff),value=""
+ if (name[".") && ($extract(name,$l(name))'=")") {
+	 xecute "set value="_name_"LogicalToDisplay("_name_")"
+ } elseif name]"" {
+	 xecute "set value="_name
+ }
+ set value1=value1_delimiter_value
+ }
+ set value=$extract(value1,2,99999)
+ quit value
+ErrorDisplayName //
+ set value=""
+ quit ""
+]]></Implementation>
+</Method>
+
+<Method name="IdByIndexEquelNext">
+<Description>
+Получение Id (или следующего) по указанному индексу</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>index:%Library.String="",string:%Library.String=""</FormalSpec>
+<ReturnType>%Library.String</ReturnType>
+<Implementation><![CDATA[
+ if index="" quit ""
+ if '$find(index,"(") quit "" ;ошибка в индексе
+ new id, indexFind
+ if $extract(index,$length(index))=")" set index=$extract(index,1,$length(index)-1) // убрали скобку
+ set indexFind=index_","" "_$ZCONVERT(string,"U")_"""" // индекс с пробелом и большие буквы
+ if $data(@(indexFind_")")) set id=$order(@(indexFind_","""")")) quit id // equel
+ set indexString=$order(@(indexFind_")"))
+ if indexString="" quit "" //нет больше индексов
+ set id=$order(@(index_",indexString,"""")"))
+ quit id
+ //#shu 020208
+]]></Implementation>
+</Method>
+
+<Method name="LoadCompileDir">
+<Description>
+Загрузка и компиляция всех файлов типа Cdl из указанной директории с поддиректориями</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>dir:%Library.String=""</FormalSpec>
+<Implementation><![CDATA[ quit dir=""  //#
+]]></Implementation>
+</Method>
+
+<Method name="SetPropertyId">
+<Description>
+Присваивает в открытом объекте свойству типа класс значение Id</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aName:%Library.String="",aId:%Library.String=""</FormalSpec>
+<ReturnType>%Library.Status</ReturnType>
+<Implementation><![CDATA[
+	set $ztrap="ErrorSetPropertyId"
+	if (aName="") quit $$$ERROR(10000,"p6.ClassUtils.SetPropertyId: не указано имя свойства")
+	
+	// если в имени свойства нет "." - значит это просто переменная
+	// и делаем ее значение равным id (а открытие объекта определенного класса на совести ...)
+	if ($length(aName,".")=1) {
+		if (aId]"") xecute "set "_aName_"="_aId
+		else  xecute "set "_aName_"="""""
+		quit $$$OK
+	}
+	
+	new orefName, propertyName, className, propertyOref, p6find, classNameList, i, cd, j, type
+	set objectName=$piece(aName,".",1,$length(aName,".")-1)
+	set propertyName=$piece(aName,".",$length(aName,"."))
+	
+	
+	// ищем свойство propertyName в ClassDefinition у orefName
+	xecute "set className = "_objectName_".%ClassName(1)"
+
+	set type=##class(p6.ClassDefinition).GetPropertyType(className,propertyName)
+	
+	// если не нашли, то ошибка
+	if (type="") quit $$$ERROR(10000,"p6.ClassUtils.SetPropertyId: В классе ["_className_"] нет такого свойства ["_propertyName_"]")
+	// если нашли, но это системный тип, то тоже ошибка
+	if ($extract(type)="%") quit $$$ERROR(10000,"p6.ClassUtils.SetPropertyId: Свойство ["_aName_"] имеет неверный тип с % ["_type_"]")
+	
+	// иначе присваиваем объектному свойству новое значение
+	if (aId]"") {
+		xecute "set propertyOref = ##class("_type_").%OpenId(aId)"
+		xecute "set "_aName_" = propertyOref"
+		if (propertyOref) kill propertyOref
+	} else {
+		xecute "set "_aName_" = """""
+	}
+	
+	quit $$$OK
+ErrorSetPropertyId //
+	quit $$$OK
+	//#shu 020116
+]]></Implementation>
+</Method>
+
+<Method name="UpdateIndices">
+<Description>
+Обновляет индексы во всех хранимых классах в текущей области</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>silent:%Library.String="",html:%Library.String=""</FormalSpec>
+<Implementation><![CDATA[
+ new classname
+ // список всех классов в области
+ Set result=##class(%Library.ResultSet).%New("%Library.ClassDefinition:ClassInfo")
+ Do result.Execute()
+ while (result.Next()) {
+    if ( result.Get("Persistent") && ('result.Get("System")) ) {
+       if ('silent) { write !,result.Get("Name"),":",result.Get("Persistent"),":",
+          result.Get("System")      //,":",result.Get("Super")
+       }
+       set classname = result.Get("Name")
+       xecute "do ##class("_classname_").%PurgeIndices()" 
+       xecute "do ##class("_classname_").%BuildIndices()" 
+       if ('silent) { write $j("",30-$length(classname)),"Indices updated..." }
+       if (html) { write "<br>" }
+    }       
+ }
+ do result.Close()
+ kill result
+ quit
+]]></Implementation>
+</Method>
+
+<Method name="SetValue">
+<Description>
+Присваивает переменной name значение value,
+возвращает статус, если ошибка при присвоении (проверка по типу в классе)</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>name:%Library.String="",value:%Library.String=""</FormalSpec>
+<ReturnType>%Library.Status</ReturnType>
+<Implementation><![CDATA[
+	set $zt="SetValueError"
+ if (name="") quit $$$OK //#
+ if $find(value,"""") set value = ##class(p6.Convert).Quote(value) // удвоение кавычек
+ set value = $zstrip(value,"<>'e"," ") //удаление пробелов
+ //удаление прошлой ошибки
+ kill %objlasterror
+ if name["." {
+	 xecute "set "_name_"="_name_"DisplayToLogical("""_value_""")"
+ }
+ else  {
+	 xecute "set "_name_"="""_value_""""
+ }
+ if $data(%objlasterror)=1 quit %objlasterror //#
+ quit $$$OK
+SetValueError
+ set $zt=""
+ quit $$$ERROR(10000,$ze)
+]]></Implementation>
+</Method>
+
+<Method name="GetQueryString">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>select:%String="",from:%String="",where:%String="",orderBy:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ new queryString
+ if (select="") || (from="") quit ""
+ set queryString = "select "_select_" from "_from
+ if (where]"") set queryString = queryString_" where ("_where_")"
+ if (orderBy]"") set queryString = queryString_" order by "_orderBy
+ quit queryString
+]]></Implementation>
+</Method>
+
+<Method name="GetListOfProperty">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String="Id",where:%String="",orderBy:%String=""</FormalSpec>
+<ReturnType>%List</ReturnType>
+<Implementation><![CDATA[
+ new result, rs, sc, queryString
+
+ set queryString = ..GetQueryString(propertyName,className,where,orderBy)
+
+ set rs = ##class(%ResultSet).%New("%DynamicQuery.SQL")
+ set sc = rs.Prepare(queryString)
+ set ^CacheTemp.GetListOfProperty("Prepare") = sc
+ if ($$$ISERR(sc)) quit ""
+ set sc = rs.Execute("")
+ set ^CacheTemp.GetListOfProperty("Execute") = sc
+ if ($$$ISERR(sc)) quit ""
+
+ set result = ""
+ while (rs.Next())
+ {
+ set result = result_$ListBuild(rs.GetData(1))
+ }
+ do rs.%Close()
+ quit result
+]]></Implementation>
+</Method>
+
+<Method name="GetResultSetOfProperty">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String="Id",where:%String="",orderBy:%String=""</FormalSpec>
+<ReturnType>%ResultSet</ReturnType>
+<Implementation><![CDATA[
+ new rs, queryString
+ set queryString = ..GetQueryString(propertyName,className,where,orderBy)
+ quit ..GetResultSet(queryString)
+]]></Implementation>
+</Method>
+
+<Method name="GetResultSet">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>queryString:%String=""</FormalSpec>
+<ReturnType>%ResultSet</ReturnType>
+<Implementation><![CDATA[
+ new rs, sc
+ set rs = ##class(%ResultSet).%New("%DynamicQuery.SQL")
+
+ set sc = rs.Prepare(queryString)
+ set ^CacheTemp.GetResultSetOfProperty("Prepare") = sc
+ if ($$$ISERR(sc)) d rs.%Close() quit $$$NULLOREF
+
+ set sc = rs.Execute("")
+ set ^CacheTemp.GetResultSetOfProperty("Execute") = sc
+ if ($$$ISERR(sc)) d rs.%Close() quit $$$NULLOREF
+
+ quit rs
+]]></Implementation>
+</Method>
+
+<Method name="GetMaxPropertyValue">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String="Id",where:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ new result, rs, queryString
+
+ set queryString = ..GetQueryString("max("_propertyName_")",className,where)
+
+ set rs = ..GetResultSet(queryString)
+ if rs=$$$NULLOREF quit ""
+
+ do rs.Next()
+ set result = rs.GetData(1)
+ do rs.%Close()
+ quit result
+]]></Implementation>
+</Method>
+
+<Method name="IsIdExist">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>orefName:%String="",id:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+	new result,className,orefClassName,rs,queryString
+	
+	if orefName'["." quit 1
+	xecute "set orefClassName="_$p(orefName,".",1,$l(orefName,".")-1)_".%ClassName(1)"
+	set className=##class(%Dictionary.CompiledProperty).%OpenId(orefClassName_"||"_$p(orefName,".",$l(orefName,"."))).Type
+	
+	if ##class(p6.csp.ClassInterface).IsOpenByIdForClass(className)=0 quit 0
+	
+	set result=$zobjclassmethod(className,"%ExistsId",id)
+	quit result
+]]></Implementation>
+</Method>
+
+<Method name="GetRefBookId">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",orderBy:%String="",where:%String="",value:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ new resultId, rs, queryString, filter,i
+
+	if ##class(%Dictionary.CompiledProperty).%ExistsId(className_"||Code") {
+		set queryString = ..GetQueryString("ID",className,##class(p6.FilterUtils).Add("Code='"_value_"'",where))
+		set rs = ..GetResultSet(queryString)
+		if rs=$$$NULLOREF quit 0
+		do rs.Next()
+		if rs.GetData(1)]"" quit rs.GetData(1)
+		kill rs
+	}
+
+
+ set field=$piece(orderBy,",",1)
+ if field="" quit ""
+ 
+ set addWhere="%SQLUPPER("_field_") LIKE '%"_$zcvt(value,"U")_"%'"
+ set filter=##class(p6.FilterUtils).Add(where,addWhere)
+ set queryString = ..GetQueryString("ID,"_field,className,filter)
+ set queryString = queryString_" order by "_field
+
+ set rs = ..GetResultSet(queryString)
+
+ if rs=$$$NULLOREF quit ""
+
+ set resultId="",i=0
+ while rs.Next() {
+	 set i=i+1
+	 set resultId = rs.GetData(1)
+	 if rs.GetData(2)=value quit
+ }
+ if rs.GetData(2)=value quit resultId
+ if i=1 quit resultId
+ if (i=0) && (##class(p6.csp.ClassInterface).IsQuickCreate(className)) quit "new"
+ if i=0 quit ""
+ quit "many"
+]]></Implementation>
+</Method>
+
+<Method name="GetLastPropertyValue">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String="Id",where:%String="",orderBy:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ new result, rs, sc, queryString
+
+ set queryString = ..GetQueryString(propertyName,className,where,orderBy)
+
+ set rs = ..GetResultSet(queryString)
+ if rs=$$$NULLOREF quit ""
+
+ set result = ""
+ while( rs.Next() ) {
+ if (rs.GetData(1)]"") set result = rs.GetData(1)
+ }
+ do rs.%Close()
+ quit result
+]]></Implementation>
+</Method>
+
+<Method name="GetSumOfProperty">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String="Id",where:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ new result, rs, sc, queryString
+
+ set queryString = ..GetQueryString("sum("_propertyName_")",className,where)
+
+ set rs = ..GetResultSet(queryString)
+ if rs=$$$NULLOREF quit ""
+
+ do rs.Next()
+ set result = rs.GetData(1)
+ do rs.%Close()
+ quit result
+]]></Implementation>
+</Method>
+
+<Method name="GetRecordCount">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String="Id",where:%String=""</FormalSpec>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+ new result, rs, sc, queryString
+
+ set queryString = ..GetQueryString("count("_propertyName_")",className,where)
+
+ set rs = ..GetResultSet(queryString)
+ if rs=$$$NULLOREF quit 0
+
+ do rs.Next()
+ set result = rs.GetData(1)
+ do rs.%Close()
+ quit result
+]]></Implementation>
+</Method>
+
+<Method name="GetTransactionErrorMessage">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>methodName:%String="",errCode:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if $get(debug) break
+ if errCode="" set errCode=$ZE
+ quit "Ошибка в исходном коде метода: "_methodName_". Можно продолжать работать, но необходимо сообщить об этой ошибке разработчикам. Код ошибки:"_errCode
+]]></Implementation>
+</Method>
+
+<Method name="CopyProperties">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>ATo:%RegisteredObject,AFrom:%RegisteredObject,aClassName:%String=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if aClassName="" set aClassName=AFrom.%ClassName(1)
+	set property="&"
+	for {
+		set property=$$$comMemberNext(aClassName,$$$cCLASSproperty,property)
+		if property="" quit
+		if $$$comMemberDefined(ATo.%ClassName(1),$$$cCLASSproperty,property)&&'##class(p6.ClassDefinition).IsPropertyCalculated(ATo.%ClassName(1),property) {
+			set $zobjproperty(ATo,property)=$zobjproperty(AFrom,property)
+		}
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="Update">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName,aField,aId,aValue</FormalSpec>
+<ProcedureBlock>1</ProcedureBlock>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set Obj=$zobjclassmethod(aClassName,"%OpenId",aId)
+	set $zobjproperty(Obj,aField)=$zobjmethod(Obj,aField_"DisplayToLogical",aValue)
+	$$$QuitOnError(Obj.Save())
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="GetOld">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aClassName,aField,aId</FormalSpec>
+<ProcedureBlock>1</ProcedureBlock>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	set Obj=$zobjclassmethod(aClassName,"%OpenId",aId)
+	set value=$zobjmethod(Obj,aField_"LogicalToDisplay",$zobjproperty(Obj,aField))
+	quit value
+]]></Implementation>
+</Method>
+</Class>
+</Export>

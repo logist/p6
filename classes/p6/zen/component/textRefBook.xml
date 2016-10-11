@@ -1,0 +1,594 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.textRefBook">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.dataCombo</Super>
+<TimeCreated>60852,69236.937932</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Property name="comboType">
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>"timer"</InitialExpression>
+<Parameter name="VALUELIST" value=",image,button,timer"/>
+</Property>
+
+<Property name="editable">
+<Description>
+If true, then this is an editable combobox (a user can directly edit the value within the input box).</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>1</InitialExpression>
+</Property>
+
+<Property name="searchKeyLen">
+<Description><![CDATA[
+If non-zero, this is the maximum number of search characters
+taken from the combo input box and passed as a parameter to 
+the query (defined by <property>sql</property> that provides the contents of the dropdown box.<br>
+If zero, then the contents of the input box are not used as a parameter.]]></Description>
+<Type>%ZEN.Datatype.integer</Type>
+<InitialExpression>50</InitialExpression>
+<Parameter name="MINVAL" value="0"/>
+</Property>
+
+<Property name="maxRows">
+<Description><![CDATA[
+Maximum number of rows to fetch from the <class>%ResultSet</class> object.]]></Description>
+<Type>%ZEN.Datatype.integer</Type>
+<InitialExpression>20</InitialExpression>
+</Property>
+
+<XData name="Style">
+<Data><![CDATA[
+<style type="text/css">
+input.comboboxInputTimer {
+	margin-top:0.2em;
+	margin-bottom:0.2em;
+}
+</style>
+]]></Data>
+</XData>
+
+<Method name="%OnAddToPageAfter">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	 
+	if ..label="" {
+		set form=..%GetForm()
+		set className=form.%controller.modelClass
+		set ..label=##class(p6.ClassDefinition).GetPropertyCaption(className,..dataBinding)
+	}
+	if ..id="" {
+		set ..id=$tr(..dataBinding,"%.()","____")
+	}
+	if ..name="" {
+		set ..name=..id
+	}
+	if (..size="")&&(..width="") {
+		set ..width="100%"
+	}
+	if ..size="" {
+		set ..controlStyle="width:100%;"_..controlStyle
+	}
+	set ..enclosingStyle="width:90%"
+	
+	Set tModelClass = ..modelClass
+
+	#; if we are not linked to the model, get it via the form
+	If ((..dataBinding'="")&&(..modelClass="")) {
+		Set tForm = ..%GetForm()
+		If ($IsObject(tForm)&&$IsObject(tForm.%controller)) {
+			Set tModelClass = tForm.%controller.modelClass
+		}
+	}
+	
+	set ..modelClass=tModelClass
+
+	set fieldType=##class(p6.ClassDefinition).GetPropertyType(tModelClass,..dataBinding)
+	
+	set columns=$zobjclassmethod(fieldType,"GetLookupColumns")
+	
+	set (select,header)=""
+	
+	for i=1:1:$length(columns,",") {
+		set select=select_", "_$p($p(columns,",",i),":",1)
+		set header=header_", "_$p($p(columns,",",i),":",2)
+	}
+	
+	set ($e(select),$e(header))=""
+	
+	set ..sql="SELECT Id,"_select_" FROM "_fieldType
+	set ..columnHeaders=header
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%GetDisplayValue">
+<Description><![CDATA[
+Lookup up the display value for the combobox given
+a logical value.<br>
+This is called when the control is initially drawn.
+A logical value of "", must have a display value of "".]]></Description>
+<FormalSpec>pValue:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if pValue="" quit ""
+	
+	Do {
+		Set tModelClass = ..modelClass
+
+		#; if we are not linked to the model, get it via the form
+		If ((..dataBinding'="")&&(..modelClass="")) {
+			Set tForm = ..%GetForm()
+			If ($IsObject(tForm)&&$IsObject(tForm.%controller)) {
+				Set tModelClass = tForm.%controller.modelClass
+			}
+		}
+
+		set fieldType=##class(p6.ClassDefinition).GetPropertyType(tModelClass,..dataBinding)
+		
+		set tDisplay=$zobjclassmethod(fieldType,"GetDisplayValue",pValue)
+
+	} While(0)
+
+	Quit tDisplay
+]]></Implementation>
+</Method>
+
+<Method name="findDisplayValue">
+<Description><![CDATA[
+Given a logical value, lookup the display value within the current set of
+options. Returns null if no match is found.<br>
+Subclasses may override this to add additional lookup behavior.]]></Description>
+<FormalSpec>value</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[	return this.LookupDisplayValue(value);
+]]></Implementation>
+</Method>
+
+<Method name="%DrawDropDownContents">
+<Description><![CDATA[
+Internal method.<br>
+Server-side method to provide contents of the list box.
+This is called from the client.
+This method use columns returned by GetLookupColumns() method to query class ]]></Description>
+<Internal>1</Internal>
+<FormalSpec>searchParm:%String,*pCount:%Integer</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set oldColumnHeaders=..columnHeaders
+	set oldSql=..sql
+	set pCount = 0, sc=$$$OK
+	
+	set fieldType=##class(p6.ClassDefinition).GetPropertyType(..modelClass,..dataBinding)
+	
+	set columns=$zobjclassmethod(fieldType,"GetLookupColumns")
+
+	#; build DHTML table to show results
+	&html<<table class="comboboxTable" width="100%" border="0" cellpadding="0" cellspacing="0">>
+
+
+	for i=1:1:$length(columns,",") {
+		set column=$p($p(columns,",",i),":",1)
+		set collation=$p($p(columns,",",i),":",3)
+		if collation="" set collation="Like"
+		set ..sql=oldSql_" where UPPER("_column_")"
+		set:collation="Like" ..sql=..sql_" [ UPPER(?)"
+		set:collation="Exact" ..sql=..sql_" = UPPER(?)"
+		set:collation="StartsWith" ..sql=..sql_" %STARTSWITH UPPER(?)"
+
+		set sc=..%DrawSingleQuery(searchParm,.pCount,.idList)
+		set ..columnHeaders=""
+	}
+
+	If $$$ISOK(sc) {
+		If (pCount = 0) {
+			// endModal
+			Set tNoMatches = $$$TextHTML("No matches")
+			&html<<tr><td onmousedown="zenPage.endModal();"><i>#(tNoMatches)#</i></td></tr>>
+		}
+	}
+
+	&html<</table>>
+
+	set ..columnHeaders=oldColumnHeaders
+	set ..sql=oldSql
+
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="%DrawSingleQuery">
+<Internal>1</Internal>
+<FormalSpec>searchParm:%String,*pCount:%Integer,*pIdList:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tSC = $$$OK
+	Set $ZT="Trap"
+	Set tRS = ""
+	Set tHasDisplay = 0
+	Set tMaxRows = ..maxRows
+	Set tCount = pCount
+
+	#; create result set
+	#; For query parameters use the values that come from 
+	#; the *parameters* property.
+	#; If searchKeyLen is non-zero, then ignore parameter(1)
+	#; and use the searchParm instead.
+	#; Special case: if you set a parameter (other than parameter(1))
+	#; to "?", then searchParm will be used for this parameter as well.
+	#; This is for special cases where the searchParm needs to occur multiple
+	#; times within a query 
+
+	#; create QueryInfo object to hold query info
+	Set tInfo = ##class(%ZEN.Auxiliary.QueryInfo).%New()
+
+	#; additional query parms
+	Set tInfo.tableName = $$$ZENVAL(..tableName)
+	Set tInfo.columnName = $$$ZENVAL(..columnName)
+	Set tInfo.whereClause = $$$ZENVAL(..whereClause)
+	Set tInfo.orderByClause = $$$ZENVAL(..orderByClause)
+	Set tInfo.groupByClause = $$$ZENVAL(..groupByClause)
+
+	#; do we have a searchParm
+	Set p = 1
+	If (..searchKeyLen > 0) {
+		Set tInfo.parms(1) = searchParm
+		Set p = 2 // skip first parameter
+	}
+	
+	#; look at parameters for additional parms
+	Set tParmCount = ..parameters.Count()
+	For n=p:1:tParmCount {
+		Set tParam = ..parameters.GetAt(n)
+		Set tVal = $$$ZENVAL(tParam.value)
+		Set tInfo.parms(n) = $S(tVal="?":searchParm,1:tVal)
+	}
+
+	#; remember original query, so we can restore it
+	Set tSQL = ..sql
+	If ((tSQL="")&&(..dataBinding'="")&&(..modelClass'="")) {
+		#; find query from model
+		Set tSC = $zobjclassmethod($$$ZENVAL(..modelClass),"%GetLookupSQL",..dataBinding,.sql,.sqllk)
+		If $$$ISERR(tSC) Quit tSC
+		Set ..sql = $G(sql)
+	}
+	
+	/*Ошибка при задании whereClause выподающий список его не учитывает,
+	  открывающийся рефбук учитывает. Проблема в %CreateResultSet или даже в tInfo.%CreateSQL()
+	  Решение-топорное но должно работать=(  
+	  grender 080305                       */
+	set temp=$$$ZENVAL(..whereClause)
+	if temp'=""	s ..sql=..sql_" AND "_temp
+	
+	Set tRS = ..%CreateResultSet(.tSC,tInfo)
+	Set ..sql = tSQL  // restore original SQL
+	If $$$ISERR(tSC) Quit tSC
+	If (..showQuery) {
+		&html<<tr><td>query:<br/><pre>#(tInfo.queryText)#</pre><hr/>>
+	}
+
+	Set tInfo = ""
+
+	If ($IsObject(tRS)) {
+		Set tStyle=""
+		Set tColCount = tRS.GetColumnCount()
+		Set tColCount = $S(..multiColumn:tColCount,tColCount=1:1,1:2)
+		Set tValueCol = $S(tColCount=1:1,..valueColumn<=tColCount:..valueColumn,1:1)
+		Set tChoiceCol = $S(tColCount=1:1,..choiceColumn<=tColCount:..choiceColumn,1:2)
+		Set tAuxCol = $S((..auxColumn>0)&&(..auxColumn<=tColCount):..auxColumn,1:0)
+
+		If (tColCount >= 1) {
+			#; index of columns to show
+			If (..displayColumns '= "") {
+				For n = 1:1:$L(..displayColumns,",") {
+					Set tColIdx(n) = +$P(..displayColumns,",",n)
+					If (tColIdx(n)=0) {
+						Set tSC = $$$ERROR($$$GeneralError,"displayColumns must contain integer values")
+						Quit
+					}
+				}
+				Set tColCount = n
+			}
+			Else {
+				Set n = 1
+				For c=1:1:tColCount {
+					If (c '= tValueCol) {
+						Set tColIdx(n) = c
+						Set n = n + 1
+					}
+				}
+			}
+		}
+		If $$$ISERR(tSC) Quit tSC
+
+
+		If ((..columnHeaders '= "") && (..columnHeaders '= $C(0))) {
+			#; column headers
+			&html<<tr>>
+			If (tColCount = 1) {
+				Set tHeader = $P(..columnHeaders,",",1)
+				&html<<th>#($ZCVT(tHeader,"O","HTML"))#&nbsp;</th>>
+			}
+			Else {
+				Set n = 1
+				Set c = $O(tColIdx(""))
+				While (c '= "") {
+					Set tHeader = $P(..columnHeaders,",",n)
+					&html<<th>#($ZCVT(tHeader,"O","HTML"))#&nbsp;</th>>
+					Set n = n + 1
+					Set c = $O(tColIdx(c))
+				}
+			}
+			&html<</tr>>
+		}
+
+		#; iterate over rows
+		Set tSC = $$$OK
+		While (tRS.%Next(.tSC) && ((tMaxRows = 0) || (tCount < tMaxRows))) {
+			If $$$ISERR(tSC) Quit
+			Set tValue = tRS.GetData(tValueCol)
+			Set:tValue=$C(0) tValue=""
+			#; !!! Change here
+			;#Set tText = tRS.GetData(tChoiceCol)
+			;+++
+			if $data(pIdList(tValue)) continue
+			set pIdList(tValue)=""
+			Set tText = ..%GetDisplayValue(tRS.GetData(tValueCol))
+			
+			;===
+			Set:tText=$C(0) tText=""
+
+			If (tAuxCol '= 0) {
+				Set tAuxValue = tRS.GetData(tAuxCol)
+				Set:tAuxValue=$C(0) tAuxValue=""
+				Set tAuxValue = $ZCVT(tAuxValue,"O","HTML")
+				Set tAuxAttr = "zenAux="""_tAuxValue_""""
+			}
+
+			Set tValue = $ZCVT(tValue,"O","HTML")
+			Set tText = $ZCVT(tText,"O","HTML")
+		
+			Set tValAttr = "zenValue="""_tValue_""""
+			Set tTextAttr = "zenText="""_tText_""""
+			Set tCls = "comboboxItem"
+			Do DrawRow()
+			Set tCount = tCount + 1
+		}
+	
+
+	}
+
+	Set pCount = tCount
+Done
+	Quit tSC
+Trap
+	Set $ZT=""
+	Set tSC = $$$ERROR($$$GeneralError,"Error running query: " _ $ZE)
+	Goto Done
+
+	#; common code to draw row of the dropdown
+DrawRow() 
+	&html<<tr id="#(..%MakeId("item_"_tCount))#" class="#(tCls)#" onmousedown="zenPage.getComponent(#(..index)#).itemMouseDown(event,#(tCount)#);" onmouseup="this.style.color='';zenPage.getComponent(#(..index)#).itemMouseUp(event,#(tCount)#);" #(tValAttr)# #(tTextAttr)# #($G(tAuxAttr))# onmouseover="this.style.color='red';" onmouseout="this.style.color='';">>
+	If (tColCount = 1) {
+		&html<<td>#($S(tText="":"&nbsp;",1:tText))#</td>>
+	}
+	Else {
+		Set c = $O(tColIdx(""))
+		While (c '= "") {
+			Set tData = tRS.GetData(tColIdx(c))
+			Set:tData=$C(0) tData=""
+			&html<<td>#($S(tData="":"&nbsp;",1:$ZCVT(tData,"O","HTML")))#</td>>
+			Set c = $O(tColIdx(c))
+		}
+	}
+	&html<</tr>>
+	Quit
+]]></Implementation>
+</Method>
+
+<Method name="inputKeyHandler">
+<Description>
+Keydown within input control.</Description>
+<FormalSpec>evt</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	evt = evt ? evt : window.event;
+	var idx = parseInt(this.selectedIndex,10);
+
+	// trap keys
+	if (this.isDropdownVisible) {
+		switch(evt.keyCode) {
+		case zenUP:
+			this.clearTimer();
+			this.keyMode = true;
+			if (evt.preventDefault) {
+				evt.preventDefault();
+			}
+			if (idx > 0) {
+				this.selectItem(idx - 1,true,false);
+			}
+			return false;
+		case zenDOWN:
+			this.clearTimer();
+			this.keyMode = true;
+			if (evt.preventDefault) {
+				evt.preventDefault();
+			}
+			if (idx < (this.getOptionCount()-1)) {
+				this.selectItem(idx + 1,true,false);
+			}
+			return false;
+		case zenPAGEUP:
+			this.clearTimer();
+			this.keyMode = true;
+			if (evt.preventDefault) {
+				evt.preventDefault();
+			}
+			if (idx > 0) {
+				this.selectItem((idx > 10) ? idx - 10 : 0,true,false);
+			}
+			return false;
+		case zenPAGEDN:
+			this.clearTimer();
+			this.keyMode = true;
+			if (evt.preventDefault) {
+				evt.preventDefault();
+			}
+			var count = this.getOptionCount();
+			if (idx < (count-1)) {
+				this.selectItem((idx < count - 10) ? idx + 10 : count - 1,true,false);
+			}
+			return false;
+		case zenESC:
+			if (evt.preventDefault) {
+				evt.preventDefault();
+			}
+			zenPage.endModal();
+			return false;
+
+		case zenENTER:
+			this.clearTimer();
+			if (idx!=-1) {
+				// choose selected item!
+				this.selectItem(idx,false,true);
+				zenPage.endModal();
+			}
+			else {
+				// choose first item!
+				this.selectItem(0,false,true);
+				zenPage.endModal();
+			}
+			return true;
+		default:
+			this.startTimer();
+			this.keyMode = null;
+			break;
+		}
+	}
+	else {
+		switch(evt.keyCode) {
+		case zenENTER:
+			break;
+		case zenDOWN:
+			// show drop down
+			if (!this.isChanged) return true;
+			this.clearTimer();
+			this.keyMode = true;
+			this.showDropdown();
+			return false;
+		default:
+			this.startTimer();
+			this.isChanged = true;
+			break;
+		}
+	}
+
+	// invoke callback, if present
+	return zenInvokeCallbackMethod(this.onkeydown,this,'onkeydown');
+]]></Implementation>
+</Method>
+
+<Method name="%DrawHTML">
+<Description><![CDATA[
+Draw the input box and button for this combobox.<br>
+Note that the actual value is placed in a hidden control as the
+contents of the input box may not be the actual value.]]></Description>
+<Implementation><![CDATA[
+	; Just the contents of ##class(%ZEN.Component.abstractComboBox).%DrawHTML
+	; We can't do ##super() becaue is ignores our %GetDisplayValue :(
+	#; find displayValue
+	Set tDisplay = ..%GetDisplayValue(..value)
+
+	#; do not add this to set of events
+	Set tIgnore("onkeypress")=""
+	Set tIgnore("onchange")=""
+	Set tIgnore("onblur")=""
+
+	&html<<input type="hidden" id="#(..%MakeId("hidden"))#" #(..%Name())# #(..%Attr("value",..value))#/>>
+	&html<<table border="0" cellspacing="0" cellpadding="0">>
+
+	Set ..controlClass = "comboboxInputTimer"
+	&html<<tr><td style="white-space: nowrap" #($S(..size="":"width=""100%""",1:""))#><input class="#(..controlClass)#" type="text" #($S(..disabled:"disabled",1:""))# #($S(..editable:$S(..readOnly:"readonly",1:""),1:"readonly"))# id="#(..%MakeId("input"))#" #(..%Attr("style",..controlStyle))# #(..%Attr("size",..size))# #(..%Attr("value",tDisplay))# #(..%Attr("maxlength",..maxlength))# #(..%GetEventHandlers(.tIgnore))# onkeydown="zenPage.getComponent(#(..index)#).inputKeyHandler(event);" onblur="zenPage.getComponent(#(..index)#).inputBlurHandler(event);" onchange="zenPage.getComponent(#(..index)#).inputChangeHandler();"/></td>>
+
+	;# here we add additional button
+	set fieldType=##class(p6.ClassDefinition).GetPropertyType(..modelClass,..dataBinding)
+	&html<<td style="white-space: nowrap; padding-left:0.3em;width:40px;"><input type="button" value="..." class="textRefBookButton" tabIndex=-1 #($S(..disabled:"disabled",1:""))# #($S(..readOnly:"disabled",1:""))#
+		onclick="zenPage.getComponent(#(..index)#).showRefBook('#(fieldType)#')" /> </td></tr>>
+
+	&html<</table>>
+	
+	If (+..#USECACHEDIV) {
+		#; extra div to cache dropdown contents
+		&html<<div style="display: none;" id="#(..%MakeId("cache"))#"></div>>
+	}
+	;# ===
+]]></Implementation>
+</Method>
+
+<Method name="DoZenEval">
+<FormalSpec>aString:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	set eval=$$$ZENVAL(aString)
+	quit eval
+]]></Implementation>
+</Method>
+
+<Method name="showRefBook">
+<FormalSpec>className</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[	zenLaunchPopupWindow("p6.zen.RefBook.cls?WindowType=Modal&ClassName="+className+"&Where="+this.DoZenEval(this.whereClause),'select'+this.index,GetWindowFeatures(),null,this);
+]]></Implementation>
+</Method>
+
+<Method name="onPopupAction">
+<FormalSpec>popupName,action,value</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(action=="close") return;
+	this.setProperty('value',value);
+	this.onchangeHandler();
+]]></Implementation>
+</Method>
+
+<Method name="selectItem">
+<Description><![CDATA[
+User has selected an item in the DropDown box.
+If <var>show</var> is true, make item visible.
+If <var>update</var> is true, update value of control.]]></Description>
+<FormalSpec>idx,show,update</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if (update) {
+		this.isChanged=false;
+	}
+	
+	return this.invokeSuper('selectItem',arguments);
+]]></Implementation>
+</Method>
+
+<Method name="inputChangeHandler">
+<Description>
+Change handler for input control.
+Users should not call this method.</Description>
+<Internal>1</Internal>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	// apply user edit to control
+	var hidden = this.findElement('hidden');
+	var input = this.findElement('input');
+	this.value = input.value;
+	hidden.value = input.value;
+	this.onchangeHandler();
+]]></Implementation>
+</Method>
+</Class>
+</Export>

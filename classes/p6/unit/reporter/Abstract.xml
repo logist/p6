@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-04 13:28:20">
+<Class name="p6.unit.reporter.Abstract">
+<Description>
+Консольный отчет</Description>
+<Super>%RegisteredObject</Super>
+<TimeCreated>60780,51573.329663</TimeCreated>
+
+<Property name="Listener">
+<Type>p6.unit.listener.Abstract</Type>
+</Property>
+
+<Method name="Run">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

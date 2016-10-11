@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.auxiliary.column">
+<Description>
+Column for p6:tablePane</Description>
+<Super>%ZEN.Auxiliary.column</Super>
+<TimeCreated>60955,64101.21523</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Property name="field">
+<Description>
+Table field used to fill in data. This may contain implicit join syntax.</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Property name="isAggregated">
+<Description>
+Do we need to aggregete this field in bottom of tablePane?</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="OnDrawCell">
+<Description><![CDATA[
+Optional.
+Name of Server-side callback method that provides HTML content
+for cells within this column.<br>
+If defined, this callback is invoked on the server when this 
+component is drawn. It provides HTML content by using &html or
+by using the WRITE command.<br>
+This must be the name of a server-only method in the page
+class that contains this view component.]]></Description>
+<Type>%ZEN.Datatype.delegator</Type>
+<Parameter name="FORMALSPEC" value="table:p6.zen.component.tablePane,name:%ZEN.Datatype.string,seed:%ZEN.Datatype.string,row:%ZEN.Datatype.string"/>
+<Parameter name="RETURNTYPE" value="%Status"/>
+</Property>
+</Class>
+</Export>

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-04 13:28:21">
+<Class name="p6.unit.TestCase">
+<Description>
+Adopted from InterSystems's %UnitTest.TestCase by logist (Dimas ltd., Russia)
+
+Test case class. All test cases are derived from here.
+Every test method should start with prefix "Test".</Description>
+<ClassType/>
+<IncludeCode>UnitTest</IncludeCode>
+<IncludeGenerator>UnitTest</IncludeGenerator>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>59429,64520.016065</TimeCreated>
+
+<Property name="Debug">
+</Property>
+
+<Property name="Manager">
+<Type>p6.unit.Manager</Type>
+</Property>
+
+<Method name="%OnNew">
+<FormalSpec>AManager</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ Set r%Manager=AManager
+ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeAllTests">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterAllTests">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeOneTest">
+<FormalSpec>aTestName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterOneTest">
+<FormalSpec>aTestName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="AssertEqualsViaMacro">
+<FormalSpec>aAutoQuoted,aValue1,aValue2,aMessage</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage)
+     _":("_aValue1_"=="_aValue2_"):"
+     _"["_..ParseAutoQuoted(aAutoQuoted,"equals")_"]"
+ Set success = aValue1=aValue2
+ Do manager.LogAssert(success,"AssertEquals",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="AssertNotEqualsViaMacro">
+<FormalSpec>aAutoQuoted,aValue1,aValue2,aMessage</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage)
+     _":("_aValue1_"'="_aValue2_"):"
+     _"["_..ParseAutoQuoted(aAutoQuoted,"equals")_"]"
+ Set success=aValue1'=aValue2
+ Do manager.LogAssert(success,"AssertNotEquals",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="AssertTrueViaMacro">
+<FormalSpec>aAutoQuoted,aValue,aMessage</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage)
+     _":("_aValue_"=TRUE):"
+     _"["_..ParseAutoQuoted(aAutoQuoted,"expr")_"]"
+ Set success=''aValue
+ Do manager.LogAssert(success,"AssertTrue",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="AssertNotTrueViaMacro">
+<FormalSpec>aAutoQuoted,aValue,aMessage</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage)
+     _":("_aValue_"=FALSE):"
+     _"["_..ParseAutoQuoted(aAutoQuoted,"expr")_"]"
+ Set success='aValue
+ Do manager.LogAssert(success,"AssertNotTrue",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="AssertStatusOKViaMacro">
+<FormalSpec>aAutoQuoted,status,aMessage</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage)_"["_..ParseAutoQuoted(aAutoQuoted,"expr")_"]"
+ Set success=$$$ISOK(status)
+ If $$$ISERR(status) Do
+ . Do $system.Status.DecomposeStatus(status,.errorarray,"-d")
+ . Set aMessage=aMessage_" => "_$g(errorarray(1))
+ Do manager.LogAssert(success,"AssertStatusOK",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="AssertStatusNotOKViaMacro">
+<FormalSpec>aAutoQuoted,status,aMessage</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage)_"["_..ParseAutoQuoted(aAutoQuoted,"expr")_"]"
+ Set success=$$$ISERR(status)
+ Do manager.LogAssert(success,"AssertStatusNotOK",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="Fail">
+<FormalSpec>aMessage</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Do manager.LogAssert(0,"FAIL",$g(aMessage))
+ Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="AssertFilesSameViaMacro">
+<FormalSpec>aAutoQuoted,file1,file2,aMessage</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Set aMessage=$g(aMessage,"'"_file1_"'=='"_file2_"'")
+ If file1=$tr(file1,"/","\") If file1'["\" Set file1=manager.CurrentDir_"\"_file1
+ If file2=$tr(file2,"/","\") If file2'["\" Set file2=manager.CurrentDir_"\"_file2
+ Set success=$$isfilesame^%qccKeyword(file1,file2)
+ Do manager.LogAssert(success,"AssertFilesSame",aMessage)
+ Quit success
+]]></Implementation>
+</Method>
+
+<Method name="LogMessage">
+<FormalSpec>message</FormalSpec>
+<Implementation><![CDATA[
+ Set manager=r%Manager
+ Do manager.LogMessage($g(message))
+ Quit
+]]></Implementation>
+</Method>
+
+<Method name="ParseAutoQuoted">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>argline:%String,type:%String</FormalSpec>
+<Private>1</Private>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ s p=0,q=0,ptr=1,piece=0
+ f i=1:1:$l(argline)+1 q:i>$l(argline)  s c=$e(argline,i) d
+ . i c="""" s q='q
+ . i c="("  s p=p+1
+ . i c=")"  s p=p-1
+ . i c=",",q=0,p=0 s args($increment(piece))=$e(argline,ptr,i-1),ptr=i+1
+ s args($increment(piece))=$e(argline,ptr,i-1)
+ i type="expr"   q $g(args(1))
+ i type="equals" q $g(args(1))_"=="_$g(args(2))
+ q ""
+]]></Implementation>
+</Method>
+</Class>
+</Export>

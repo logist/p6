@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.unit.Manager">
+<Description>
+Adopted from InterSystems's %UnitTest.Manager by logist (Dimas ltd., Russia)
+
+Manager class. do ##class(p6.unit.Manager).RunTest() to run all tests.
+You can turn into debug mode by do ##class(p6.unit.Manager).RunTest("/debug=1")</Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%RegisteredObject</Super>
+<TimeCreated>59429,65352.216564</TimeCreated>
+
+<Property name="LogIndex">
+</Property>
+
+<Property name="Debug">
+</Property>
+
+<Property name="Display">
+</Property>
+
+<Property name="CurrentSuite">
+</Property>
+
+<Property name="CurrentClass">
+</Property>
+
+<Property name="CurrentMethod">
+</Property>
+
+<Property name="TestCount">
+</Property>
+
+<Property name="Selenium">
+<Type>p6.unit.Selenium</Type>
+</Property>
+
+<Property name="Listener">
+<Type>p6.unit.listener.Abstract</Type>
+</Property>
+
+<Property name="Reporter">
+<Type>p6.unit.reporter.Abstract</Type>
+</Property>
+
+<Property name="ClassList">
+<MultiDimensional>1</MultiDimensional>
+</Property>
+
+<Property name="Data">
+<Description>
+Data for test cases</Description>
+<MultiDimensional>1</MultiDimensional>
+</Property>
+
+<Method name="RunAll">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aQualifiers</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+ $$$QuitOnError(..RunTestSuite("",.aQualifiers))
+ quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="RunTestSuite">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aSuite="",aQualifiers</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set Manager=##class(p6.unit.Manager).%New()
+	
+	set defaultQualifiers="/debug=0"
+		_"/display=errors"
+		_"/listener=p6.unit.listener.Console"
+		_"/reporter=p6.unit.reporter.Console"
+	Do ..ParseQualifiers(.aQualifiers,defaultQualifiers)
+	Set Manager.Debug=+aQualifiers("debug")
+	Set Manager.Display=aQualifiers("display")
+	set Manager.Listener=$zobjclassmethod(aQualifiers("listener"),"%New")
+	set Manager.Reporter=$zobjclassmethod(aQualifiers("reporter"),"%New")
+	set Manager.Reporter.Listener=Manager.Listener
+
+	set className="&" // Пропустить процентованные классы
+	for {
+		set className=$$$comClassNext(className)
+		if className="" quit
+		set suite=$piece(className,".",1,$l(className,".")-1)
+		if suite'[aSuite continue
+		if '$$issubclassof^%occCompile(className,"p6.unit.TestCase") continue
+		set Manager.ClassList(suite,className)=""
+	}
+
+	$$$QuitOnError(Manager.RunClassList())
+
+	$$$QuitOnError(Manager.Reporter.Run())
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="RunClassList">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+
+	do ..Listener.OnBegin()
+
+	for {
+		set suite=$order(i%ClassList($get(suite)))
+		quit:suite=""
+
+		do ..Listener.OnBegin(suite)
+
+		for {
+			set className=$order(i%ClassList(suite,$get(className)))
+			quit:className=""
+			do ..RunOneTestCase(suite,className) 
+		}
+		
+		do ..Listener.OnEnd(suite)
+	}
+	
+	do ..Listener.OnEnd()
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="ParseQualifiers">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&qualifiers,defaults]]></FormalSpec>
+<Implementation><![CDATA[
+ for qspec=$g(defaults),$g(qualifiers) {
+    for i=2:1:$l(qspec,"/") {
+       Set qspecone=$zcvt($p(qspec,"/",i),"l")
+       If qspecone["=" {
+          Set qname=$p(qspecone,"=",1),qvalue=$p($p(qspec,"/",i),"=",2)
+       } ElseIf $e(qspecone,1,2)="no" {
+          Set qname=$e(qspecone,3,999),qvalue=0
+       } Else {
+          Set qname=qspecone,qvalue=1
+       }
+     Set qualifiers(qname)=qvalue
+     }
+ }
+ Quit
+]]></Implementation>
+</Method>
+
+<Method name="RunOneTestCase">
+<FormalSpec>suite:%String,class:%String</FormalSpec>
+<Implementation><![CDATA[
+ set ..CurrentSuite=suite
+ Do ..Listener.OnBegin(suite,class) Do  Do ..Listener.OnEnd(suite,class)
+ . If '..Debug Set $zt="OneDotError"
+ . Set testcase=$zobjclassmethod(class,"%New",##this)
+ . Set testcase.Debug=..Debug
+ . Set ..CurrentClass=class,..CurrentMethod="OnBeforeAllTests"
+ . Set sc=testcase.OnBeforeAllTests() If $$$ISERR(sc) Do ..Listener.OnFail(suite,class,"OnBeforeAllTests",..GetSc(sc)) Break:..Debug  Quit
+ . Set method="" For  Set method=$$$comMemberNext(class,$$$cCLASSmethod,method) q:method=""  If $e(method,1,4)="Test" Do
+ . . set ..CurrentMethod=method
+ . . Do ..Listener.OnBegin(suite,class,method) Do  Do ..Listener.OnEnd(suite,class,method)
+ . . . Set sc=testcase.OnBeforeOneTest(method) If $$$ISERR(sc) Do ..Listener.OnFail(suite,class,"OnBeforeOneTest",..GetSc(sc)) Break:..Debug  Quit
+ . . . If '..Debug Set $zt="MethError"
+ . . . Do $zobjmethod(testcase,method)
+ . . . Set sc=testcase.OnAfterOneTest(method) If $$$ISERR(sc) Do ..Listener.OnFail(suite,class,"OnAfterOneTest",..GetSc(sc)) Break:..Debug  Quit
+ . . . Quit
+MethError	. . . Do ..Listener.OnFail(suite,class,method,$ze_":"_$Text(@$piece($Piece($ze,">",2,32767)," ",1))_", %objlasterror:"_##class(p6.CspMethods).StatusForAlert($get(%p6error)))
+ . . . Quit
+ . Set sc=testcase.OnAfterAllTests() If $$$ISERR(sc) Do ..Listener.OnFail(suite,class,"OnAfterAllTests",..GetSc(sc)) Break:..Debug  Quit
+ . Kill testcase
+ . Quit
+OneDotError	. Do ..Listener.OnFail(suite,class,"BeforeOrAfterTestError",$ze_":"_$Text(@$piece($Piece($ze,">",2,32767)," ",1)))
+ . Quit
+ ;
+ Quit
+]]></Implementation>
+</Method>
+
+<Method name="GetSc">
+<FormalSpec>status</FormalSpec>
+<Implementation><![CDATA[
+ If $$$ISOK(status) Quit ""
+ Do $system.Status.DecomposeStatus(status,.errorarray,"-d") Set errortext=$g(errorarray(1))
+ Quit errortext
+]]></Implementation>
+</Method>
+
+<Method name="LogAssert">
+<FormalSpec>success,action,description</FormalSpec>
+<Implementation><![CDATA[
+ if ..CurrentMethod="" quit
+ if success do ..Listener.OnSuccess(..CurrentSuite,..CurrentClass,..CurrentMethod,action_":"_description)
+ else  do ..Listener.OnFail(..CurrentSuite,..CurrentClass,..CurrentMethod,action_":"_description) Break:..Debug
+ Quit
+]]></Implementation>
+</Method>
+</Class>
+</Export>

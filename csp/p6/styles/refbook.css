@@ -1,0 +1,37 @@
+body { background-color: "BUTTONFACE"; }
+
+BODY {scrollbar-face-color:#4E6D90;
+ scrollbar-shadow-color:#FFFFFF; scrollbar-highlight-color:#FFFFFF;
+ scrollbar-3dlight-color:#4E6D90;
+ scrollbar-darkshadow-color:#4E6D90;
+ scrollbar-track-color:#FCFCFC;
+ scrollbar-arrow-color:#FFFFFF;}
+
+table {  }
+
+.tContainer {overflow: scroll;overflow-x:auto;height:100%; width:100%;}
+
+
+tr { font-family: "MS Sans Serif"; font-size: "10pt"; cursor: default; }
+tr.header { position:relative; background-color: #b0b0b0; }
+tr.bottom { background-color: #c0c0c0; }
+tr.lightrow { background-color: #F8F8FF; }
+tr.darkrow { background-color: #C0D2DC; }
+tr.lr { background-color: #F8F8FF; }
+tr.dr { background-color: #C0D2DC; }
+
+td {  }
+td.header {  }
+td.indexheader { font-weight: bold; }
+td.selected { background-color: #eee8aa; color: "black"; }
+
+button { font-family: "MS Sans Serif"; font-size: "9pt"; }
+button.navigator { width: 35px; height: 25px; background-color: #9DB9C8;}
+button.header { width: 100%; }
+button.indexheader { width: 100%; font-weight: bold; }
+
+input.search { width: 100%; }
+
+a.group { color: "black"; background-color2:ABC0CD; text-decoration:none;}
+a.group:hover { background-color:#9DB9C8; color:black; border: 1px solid #000;}
+

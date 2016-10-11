@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.csp.InputRuleUtils">
+<Description>
+Методы для генератора правил Csp</Description>
+<ClassType/>
+<IncludeCode>%occInclude,%cspInclude</IncludeCode>
+<ProcedureBlock>0</ProcedureBlock>
+<Super>%Library.RegisteredObject</Super>
+<TimeCreated>59080,56492</TimeCreated>
+
+<Method name="GetRefBookButton">
+<Description>
+формирование кнопки refbook</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>inputId:%String="",serverSideName:%String="",refBookRunFunction:%String="",buttonText:%String="...",onChangeJSCode:%String="",number=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ new source,p6refbookRule,btTextRule
+ set source=""
+ if inputId="" quit "" //#
+ if serverSideName="" quit "" //#
+ if refBookRunFunction="" quit "" //#
+ set source=source_" <button tabindex=-1 "_$$$EOL
+ set source=source_" onclick="" if("_inputId_".readOnly) return; currentRefId="_inputId_".valueId;p6return="_refBookRunFunction_"; "
+ set source=source_inputId_".focus(); "
+ set source=source_"if (p6return != '') {"_inputId_".valueId = p6return; ObjectSetId("_inputId_".name,p6return); "_inputId_".style.color=''; "
+ set source=source_inputId_".refresh(); currentRefId='';"
+ set source=source_onChangeJSCode
+ set source=source_" } "" "_$$$EOL
+ set source=source_"  id=""bt_"_inputId_number_""" > "_buttonText_"</button>"_$$$EOL  
+ quit source
+]]></Implementation>
+</Method>
+
+<Method name="CreateRefBookFunction">
+<Description>
+формирование функции вызова refbook для класса cspClassName</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>cspClassName:%String="",functionName:%String=""</FormalSpec>
+<Implementation><![CDATA[
+ if cspClassName="" quit "" //#
+ if functionName="" quit "" //#
+ w "function get_"_functionName_" (filter) {"_$c(13,10)
+ w "   var jsRefBook = new aRefBook();"_$c(13,10)
+ x "do ##class("_cspClassName_").GetRefBook()"
+ w "return jsRefBook}"_$c(13,10)
+
+ w "function run_"_functionName_" (filter) {"_$c(13,10)
+ w "   var jsRefBook = get_"_functionName_"(filter);"_$c(13,10)
+ w "   return jsRefBook.Run();"_$c(13,10)
+ w "}"_$c(13,10)
+]]></Implementation>
+</Method>
+
+<Method name="onchangeRule">
+<Description>
+формирование onchange</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>string:%Library.String=""</FormalSpec>
+<Implementation><![CDATA[
+ set onchangeRule = %this.GetAttribute("onchange")
+ //перевод кавычек #server(...)# так требует ???
+ set onchangeRule = $translate(onchangeRule,"""","'")
+ set string = $translate(string,"""","'")
+ // sessionPreservePage=1 - определен выделенный раздел для этой страницы
+ // пока это заглушка на момент компиляции страницы присваивается этот параметр
+ If ($get(sessionPreservePage)=1) {
+ Do %this.SetAttribute("onchange",string_" "_onchangeRule)
+ }
+ quit
+ //#shu 020208
+]]></Implementation>
+</Method>
+</Class>
+</Export>

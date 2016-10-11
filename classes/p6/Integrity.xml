@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.Integrity">
+<Description>
+Класс предназначен для обеспечения ссылочной целостности</Description>
+<Abstract>1</Abstract>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>p6.Persistent</Super>
+<TimeCreated>59070,62583</TimeCreated>
+
+<UDLText name="T">
+<Content><![CDATA[
+// Информация о ссылках хранится в глобали вида:
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+//      ^admin.Integrity("S", className, ID, refClassName, refID)
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+//      ^admin.Integrity("D", refClassName, refID, ClassName, ID)
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// где, "S" - ветвь, работа с которой ведется через метод Save()
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+//      "D" - ветвь, работа с которой ведется через метод DeleteId()
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// Суть: в объекте класса=className с Id=ID есть ссылка на 
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+//         объект класса=refClassName c Id=refID
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// 
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// От данного класса должны наследоваться все хранимые классы,
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// для которых необходимо отслеживать ссылочную целостность.
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// При этом работа с объектами должна вестись не через 
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// стандартные методы %Save() и %DeleteId(), а через
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// методы Save() и DeleteId(), которые определены в данном классе
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// shu 040130 TCOMMIT заменен на if ($TLEVEL>0) { TCOMMIT }
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// 
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// Параметры классов, используемые p6.Integrity:
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// * NotIntegrityForProperties - через запятую список свойств, по которым не строится Integrity
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// * ChildClasses - через запятую список дочерних классов в формате <полное имя класса>:<поле-ссылка>
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+//     эти классы удалятся вместе с родительским классом.
+
+]]></Content>
+</UDLText>
+
+<Method name="Save">
+<Description>
+ Сохранение объектов</Description>
+<PublicList>NewObject,canSave,Session</PublicList>
+<ReturnType>%Library.Status</ReturnType>
+<Implementation><![CDATA[
+
+  new canSave, NewObject
+
+  if ('$data(^CacheTemp.IsNotExceptionInIntegrity))
+  {
+     set $ztrap="ExceptionProcessing1"
+  }
+  
+
+  set NewObject = "" //признак изменение-M / новый-N
+  // флаг разрешения сохранения
+  set canSave = $$$YES
+  
+  // начинаем транзакцию
+  TSTART
+
+  set ^CacheTemp.CurrentSavedObjectClassName($job) = ..%ClassName(1)
+  // проводим валидацию объекта
+  set sc = ..%ValidateObject()
+
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // вызываем свой OnBeforeSave()
+  set sc = ..OnBeforeSave()
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+  // сохраняем объект, автоматом вызовутся %OnBeforeSave() и %OnAfterSave()
+  set sc = ..%Save()
+  //set ^a(..%ClassName())= $get(^a(..%ClassName()))_":"_NewObject
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // вызываем свой OnAfterSave()
+  set sc = ..OnAfterSave()
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // протокол изменений NewObject = N, M
+  if ..#LOGDETALISATION do ##class(admin.LogObject).Put(##this,$get(NewObject))
+
+  // подтверждаем завершение транзакции
+  kill ^CacheTemp.CurrentSavedObjectClassName($job)
+  if ($TLEVEL>0) { TCOMMIT }
+  quit $$$OK
+
+ExceptionProcessing1
+  set errCode=$ZE
+  TROLLBACK
+  quit $$$ERROR(10000,##class(p6.ClassUtils).GetTransactionErrorMessage("Save",errCode))
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeSave">
+<Description>
+свой OnBeforeSave</Description>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterSave">
+<Description>
+свой OnAftersave</Description>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnBeforeSave">
+<Description>
+разрешаем сохранять объект только через метод Save()</Description>
+<FormalSpec>Insert:p6.dt.Boolean</FormalSpec>
+<Private>1</Private>
+<PublicList>NewObject,canSave</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+  set NewObject = $select(Insert:"N",1:"M") // новый или модификация
+  if ('$data(canSave)) quit $$$ERROR(10000, "Нельзя сохранить объект класса "_..%ClassName(1)_" напрямую через метод %Save(). Необходимо использовать метод Save().")
+  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnAfterSave">
+<Description>
+разрешаем сохранять объект только через метод Save()</Description>
+<FormalSpec>Insert:p6.dt.Boolean</FormalSpec>
+<Private>1</Private>
+<PublicList>canSave</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+  if ('$data(canSave)) quit $$$ERROR(10000, "Нельзя сохранить объект класса "_..%ClassName(1)_" напрямую через метод %Save(). Необходимо использовать метод Save().")
+  // обновляем для объекта информацию по ссылкам
+  do ##class(p6.IntegrityUtils).UpdateDataByObject(##this)
+  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="DeleteId">
+<Description>
+ Удаление объектов</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%Library.String</FormalSpec>
+<PublicList>canDelete</PublicList>
+<ReturnType>%Library.Status</ReturnType>
+<Implementation><![CDATA[
+
+  if ('$data(^CacheTemp.IsNotExceptionInIntegrity))
+  {
+     set $ztrap="ExceptionProcessing2"
+  }
+
+  // узнаем имя класса удаляемого объекта
+  set sc = $zobjclassmethod(..%ClassName(1),"%OnDetermineClass",$lb(id),.className)
+
+  // флаг разрешения удаления
+  new canDelete set canDelete = $$$YES
+
+  // начинаем транзакцию
+  TSTART
+
+  // перед непосредственным удалением объекта - удаляем все объекты в child-классах
+  set sc = ##class(p6.IntegrityUtils).DeleteChildObjects(className, id)
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // вызываем свой OnBeforeDelete()
+  set sc = $zobjclassmethod(className,"OnBeforeDelete",id)
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // проверяем наличие ссылок на объект этого класса с Id=id
+  set sc = ##class(p6.IntegrityUtils).CheckDataById(className, id)
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // удаляем объект, автоматом вызовется %OnDelete()
+  set sc = $zobjclassmethod(className,"%DeleteId",id)
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // вызываем свой OnAfterDelete()
+  set sc = $zobjclassmethod(className,"OnAfterDelete",id)
+  if ($$$ISERR(sc))
+  {
+    TROLLBACK
+    quit sc
+  }
+
+  // после удаления объекта, удаляем инфу о тех ссылках которые были в нем
+  do ##class(p6.IntegrityUtils).RemoveDataById(className, id)
+
+  // протокол удаления объекта
+  do ##class(admin.LogObject).PutId(className,id,"D")
+
+  // подтверждаем завершение транзакции
+  if ($TLEVEL>0) { TCOMMIT }
+  quit $$$OK
+
+
+ExceptionProcessing2
+ set errCode=$ZE 
+  TROLLBACK
+  quit $$$ERROR(10000,##class(p6.ClassUtils).GetTransactionErrorMessage("DeleteId",errCode))
+]]></Implementation>
+</Method>
+
+<Method name="OnBeforeDelete">
+<Description>
+свой OnBeforeDelete</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%String</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterDelete">
+<Description>
+свой OnAfterDelete</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>id:%String</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnDelete">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>oid:%ObjectIdentity</FormalSpec>
+<Private>1</Private>
+<PublicList>canDelete</PublicList>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+  if ('$data(canDelete)) quit $$$ERROR(10000, "Нельзя удалить объект напрямую через метод %DeleteId(). Необходимо использовать метод DeleteId().")
+  quit $$$OK
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+// Прочие методы обратного вызова,
+
+]]></Content>
+</UDLText>
+
+<UDLText name="T">
+<Content><![CDATA[
+// чтобы можно было наследовать
+
+]]></Content>
+</UDLText>
+
+<Method name="%OnValidateObject">
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnNew">
+<FormalSpec>Param:%CacheString=""</FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnOpen">
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[  quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

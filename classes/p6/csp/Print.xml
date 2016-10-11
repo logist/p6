@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.csp.Print">
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%CSP.Page</Super>
+<TimeCreated>60450,39673</TimeCreated>
+
+<Method name="OnPreHTTP">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	/*Чтобы IE открывал документы MS не в себе, а запускал Word/Excel
+	Проводник->(Menu)Сервис->(Menu)Свойства папки->(Tab)Типы файлов->XLS->(Кнопка)Дополнительно->(CheckBoxOff)Показывать в том же окне*/
+
+	set RepSetting=$GET(%request.Data("ReportSet",1))
+	if RepSetting="2" {
+		set %response.ContentType = "application/vnd.oasis.opendocument.spreadsheet"
+		set mode=$GET(%request.Data("Mode",1),"")
+		if mode="1" {
+			set %response.ContentType = "application/vnd.oasis.opendocument.text"
+			Do %response.SetHeader("content-disposition","attachment; filename=Report.odt")
+		}else {
+			Do %response.SetHeader("content-disposition","attachment; filename=Report.ods")
+		}	
+	}else {	
+		set mode=$GET(%request.Data("Mode",1),"")
+		if mode="1" {
+			set %response.ContentType = "application/msword"
+			Do %response.SetHeader("content-disposition","attachment; filename=Report.doc")
+		}elseif mode="2"
+		{
+			set %response.ContentType = "application/vnd.ms-excel"
+			Do %response.SetHeader("content-disposition","attachment; filename=Report.xls")
+		}
+	}	
+	set %response.Expires = "Thu, 01 Apr 2003 00:00:00 GMT"
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="OnPage">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<ServerOnly>1</ServerOnly>
+<Implementation><![CDATA[
+	w "<head>"
+	w "<meta http-equiv=""Content-Type"" content=""text/html; charset=windows-1251"">"
+	w "</head><body>"
+	
+	set dataFrom=$GET(%request.Data("DataFrom",1),"")
+	set dataFrom=..UnescapeURL(dataFrom)
+	
+	set File=##class(%FileCharacterStream).%New()
+	Set File.Filename=dataFrom
+
+	While 'File.AtEnd {
+		Set line=File.ReadLine()
+		// Вставка border="1"
+		set sub1=$PIECE(line,"border=""",1) 
+		w sub1
+		set sub2=$PIECE(line,"border=""",2)
+		if sub2'="" {
+			set $PIECE(sub2,"""",1)=1
+			w "border="""_sub2
+		}
+		write !
+	}
+	
+	w "</body>"
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Parameter name="CHARSET">
+<Default>cp1251</Default>
+</Parameter>
+</Class>
+</Export>

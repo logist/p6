@@ -1,0 +1,1341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.tablePane">
+<Super>%ZEN.Component.tablePane</Super>
+<TimeCreated>60855,61908.607379</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<UDLText name="T">
+<Content><![CDATA[
+// Redefine initial values from parent
+
+]]></Content>
+</UDLText>
+
+<Property name="columns">
+<Description><![CDATA[
+List of column information objects.<br>
+Each object specifies additional details about a column 
+in the table.<br>]]></Description>
+<Type>p6.zen.auxiliary.column</Type>
+<Collection>list</Collection>
+<Parameter name="XMLPROJECTION" value="ELEMENT"/>
+<Parameter name="XMLTYPECONSTRAINT" value="CHOICE"/>
+</Property>
+
+<Property name="useKeys">
+<Description>
+If true, then the tablePane will capture user keystrokes and use them
+for simple table navigation. Set true by default.</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>1</InitialExpression>
+</Property>
+
+<Property name="pageSize">
+<Description>
+This is the number of items to display on
+a single "page" of the table.
+0 means show all data on first page.
+This can only be set to a non-zero value when the table
+is in snapshot mode.
+Default is 200.</Description>
+<Type>%ZEN.Datatype.integer</Type>
+<InitialExpression>200</InitialExpression>
+</Property>
+
+<Property name="showZebra">
+<Description>
+If true, then display rows using alternating colors.</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>1</InitialExpression>
+</Property>
+
+<Property name="useSnapshot">
+<Description>
+If true, create a temporary snapshot of the query results.
+This allows for paging and sorting without re-executing the query.</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>1</InitialExpression>
+</Property>
+
+<Property name="nowrap">
+<Description><![CDATA[
+IE does not support CSS nowrap correctly so this flag provides
+a way to control whether table cells allow word wrapping or not.<br>]]></Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="maxRows">
+<Description><![CDATA[
+Maximum number of rows to fetch from the <class>%ResultSet</class> object.]]></Description>
+<Type>%ZEN.Datatype.integer</Type>
+<InitialExpression>10000</InitialExpression>
+</Property>
+
+<Property name="showRowSelector">
+<Description>
+If true, then a column indicating the selected row is displayed.</Description>
+<Type>%ZEN.Datatype.boolean</Type>
+<InitialExpression>0</InitialExpression>
+</Property>
+
+<Property name="valueColumn">
+<Description>
+If defined, this is the name of the data column that provides
+a logical value for a selected row.</Description>
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>"ID"</InitialExpression>
+</Property>
+
+<XData name="Style">
+<Data><![CDATA[
+<style type="text/css">
+/* @doc="Style for odd-rows when using zebra styling." */
+.tpOdd {
+	color: darkblue;
+	background-color: #F8F8FF;
+}
+
+/* @doc="Style for even-rows when using zebra styling." */
+.tpEven {
+	color: darkblue;
+	background-color: #C0D2DC;
+}
+
+/* @doc="Style for bottom row with aggregations" */
+.tpBottomRow {
+	color: darkblue;
+	background-color: #DDDDDD;
+}
+
+TABLE.tpTable {
+	TABLE-LAYOUT: auto;
+}
+</style>
+]]></Data>
+</XData>
+
+<Method name="PrepareColumns">
+<Description>
+Prepare columns - fill in default values</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	for i=1:1:..columns.Count() {
+		set Column = ..columns.GetAt(i)
+		if 'Column.%IsA("p6.zen.auxiliary.column") continue
+		if Column.field]"" {
+			if Column.field["-" set Column.colExpression=Column.field
+			else  set Column.colName=Column.field
+			if (..tableName]"") && (Column.header="") {
+				set className=$tr(..tableName,"_",".")
+				set firstFieldName=$tr($piece(Column.field,"-",1)," ")
+				set Column.header=##class(p6.ClassDefinition).GetPropertyCaption(className,firstFieldName)
+			}
+		}
+		if Column.isAggregated {
+			if (..aggCols="") {
+				set ..aggCols=i
+			}else {
+				set ..aggCols=..aggCols_","_i
+			}       
+		}
+		
+		if (Column.colExpression]"") && (Column.colName="") {
+			set Column.colName=$tr(Column.colExpression,"()->|","")
+		}
+		if (Column.colName="ID") {
+			set Column.header="Код"
+		}
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%DrawHTML">
+<Implementation><![CDATA[
+	do ..PrepareColumns()
+	// Here we should write do ##super(), but it doesn't call our %DrawTable
+	#; check for invalid property combinations
+	Set tSC = $$$OK
+	If ('..useSnapshot && (+..pageSize>0)) {
+		Set tSC = $$$ERROR($$$GeneralError,"Page size should only be specified in snapshot mode")
+	}
+
+	If (..useKeys) {
+		#; insert invisible input to catch key events
+		Set keyevt = "onkeydown=""zenPage.getComponent("_..index_").tpKeyDownHandler(event);"" onkeypress=""zenPage.getComponent("_..index_").tpKeyPressHandler(event);"""
+		&html<<input type="text" id="#(..%MakeId("invisible"))#" style="top:0px;left:0px;position:absolute;border: 0px solid green;width:0;height:0;" #(keyevt)# />>
+	}
+	
+	Set tInfo = ""
+	Set tRS = ""
+	Set tRunQuery = 1
+	If ('..clearSnapshot && (%zenContext'="page") && ..useSnapshot && (..snapshotId '= "")) {
+		#; test if snapshot exists
+		If $D(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index)) {
+			Set tRunQuery = 0
+		}
+		Else {
+			#; go back to page 1
+			Set ..currPage = 1
+		}
+	}
+
+	If (tRunQuery) {
+		If ((..clearSnapshot || '..useSnapshot) && (..snapshotId'="")) {
+			#; kill old snapshot
+			Kill ^CacheTemp.zenData(%session.SessionId,..snapshotId,..index)
+			Set ..snapshotId=""
+		}
+
+		#; create QueryInfo object to hold query info
+		Set tInfo = ##class(%ZEN.Auxiliary.QueryInfo).%New()
+		#; convert parameters to array
+		For n = 1:1:..parameters.Count() {
+			Set value = ..parameters.GetAt(n).value
+			Set tInfo.parms(n) = $$$ZENVAL(value)
+		}
+
+		#; additional query parms
+		Set tInfo.sortColumn = $$$ZENVAL(..currColumn)
+		Set tInfo.sortOrder = $$$ZENVAL(..sortOrder)
+		Set tInfo.tableName = $$$ZENVAL(..tableName)
+		Set tInfo.columnName = $$$ZENVAL(..columnName)
+		Set tInfo.whereClause = $$$ZENVAL(..whereClause)
+		Set tInfo.orderByClause = $$$ZENVAL(..orderByClause)
+		Set tInfo.groupByClause = $$$ZENVAL(..groupByClause)
+		
+		#; # of rows to fetch
+		If (..useSnapshot) {
+			Set tInfo.rows = 0 // fetch all
+		}
+
+		#; look at column object to find filters and column info.
+		#; these will be passed on to the CreateResultSet callback
+		#; so that it can apply filtering etc.
+		Set tCount = ..columns.Count()
+		For n=1:1:tCount {
+			Set tColumn = ..columns.GetAt(n)
+			Set tColName = $$$ZENVAL(tColumn.colName)
+			If (tColName'="") {
+				#; make sure client has resolved client name
+				Set:tColName'=tColumn.colName tColumn.actualColName = tColName
+
+				#; column info
+	 			Set tInfo.columns(n) = tColName
+	 			Set tInfo.columnExpression(tColName) = $$$ZENVAL(tColumn.colExpression)
+
+				#; filter info
+				Set tInfo.filters(tColName) = $S(tColumn.filterValue=$C(0):"",1:tColumn.filterValue)
+				Set tInfo.filterOps(tColName) = $S(tColumn.filterOp=$C(0):"",1:tColumn.filterOp)
+				Set tInfo.filterTypes(tColName) = $S(tColumn.filterType=$C(0):"",1:tColumn.filterType)
+			}
+		}
+
+		#; create and execute result set
+		Set ..lastUpdate = ""
+		Set ..rowCount = "" // clear
+		Set tRS = ..%CreateResultSet(.tSC,tInfo,..initialExecute)
+		If $$$ISERR(tSC) {
+			#; don't show error if no initialExecute
+			If (..initialExecute) {
+				Do ##class(%ZEN.Utils).%DisplayErrorHTML(%this,tSC)
+			}
+		}
+
+		If $$$ISOK(tSC)&&$IsObject(tRS) {
+			#; set lastUpdate time: timestamp plus ms
+			Set ..lastUpdate = $ZDT($ZU(188),3,,3)
+	
+			If (..useSnapshot) {
+				#; build the snapshot
+				#; create snapshot ID
+				Set ..snapshotId = ($ZH*100)\1
+				Set tSC = ..%CreateSnapshot(..snapshotId, tRS)
+				If $$$ISERR(tSC) {
+					Do ##class(%ZEN.Utils).%DisplayErrorHTML(%this,tSC)
+				}
+			}
+		}
+	}
+
+	#; diagnostic display
+	If ($$$ZENVAL(..showQuery)) {
+		If $IsObject(tInfo) {
+			Set tQueryText = tInfo.queryText
+		}
+		Else {
+			Set tQueryText = "snapshot: (" _ ..snapshotId _ ")"
+		}
+		&html<<div style="border: 1px solid darkblue; padding:2px; background: white;">#($ZCVT(tQueryText,"O","HTML"))#</div>>
+	}
+
+	#; draw the table
+	If $$$ISOK(tSC) {
+		Set tSC = ..%DrawTable(tRS)
+		If $$$ISERR(tSC) {
+			Do ##class(%ZEN.Utils).%DisplayErrorHTML(%this,tSC)
+		}
+		Set tRS = ""
+	}
+	
+	#; reset execute flag
+	Set ..initialExecute = 1
+	quit
+]]></Implementation>
+</Method>
+
+<Method name="%DrawTable">
+<Description>
+Draw the table.
+This is almost 100% Intersystems method. P6 code injections are marked 
+;+++++ P6
+;----- P6</Description>
+<FormalSpec>pRS:%ResultSet</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tSC = $$$OK
+	#; we are forced to be IE-specific for fixed header
+	Set tIE = $$$ZENISIE
+
+	#; build array containing column information
+	#; first get columns from actual query or snapshot
+	#; and place them, by name, into tColNames
+	#; and by number, into tColNums
+	#; we assume there are no duplicate column names
+
+	#; get columns
+	Set tColsFromQuery = (..dataSource="query")
+	Set tColNums = 0
+	If (..useSnapshot && (..snapshotId'="")) {
+		#; use snapshot
+		Set c = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"info",""))
+		While (c '= "") {
+			Set tName = $G(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"info",c))
+			Set tHeader = $G(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"info",c,"th"),tName)
+			Set tType = $G(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"info",c,"type"),10)
+			Set tColNames(tName) = c
+			If (tColsFromQuery) {
+				#; add column
+				Set tColNums = tColNums + 1
+				Set tColNums(c) = tName
+				Set:tHeader'=tName tColNums(c,"th") = tHeader
+				Set tColNums(c,"type") = tType
+			}
+			Set c = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"info",c))
+		}
+		
+		#; if a sort is specified, build an index (unless it exists)
+		If ((..currColumn '= "") && $D(tColNames(..currColumn)) && (..snapshotId'="")) {
+			Set cn = tColNames(..currColumn)
+			If ('$D(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"index",..currColumn))) {
+				Set tKey = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"data",""),1,tSnapData)
+				While (tKey '= "") {
+					#; collate
+					Set tType = $G(tColNums(cn,"type"),10)
+					If (..%IsTypeNumeric(tType)) {
+						Set tValue = $LG(tSnapData,cn)
+						Set tValue = $S(tValue="":1E-14,1:+tValue)
+					}
+					Else {
+						Set tValue = " "_$ZCVT($LG(tSnapData,cn),"U")
+					}
+					Set ^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"index",..currColumn,tValue,tKey)=""
+					Set tKey = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"data",tKey),1,tSnapData)
+				}
+			}
+		}
+
+	}
+	ElseIf $IsObject(pRS) {
+		#; get columns from result set
+		Set tRSCols = pRS.GetColumnCount()
+		For c = 1:1:tRSCols {
+			Set tColNames(pRS.GetColumnName(c)) = c
+			If (tColsFromQuery) {
+				Set tColNums = tColNums + 1
+				#; add column
+				Set tColNums(c) = pRS.GetColumnName(c)
+				Set tColNums(c,"th") = pRS.GetColumnHeader(c)
+				#; type--> 3:float,5:integer,10:string,12:binstream,13:charstream
+				Set:pRS.GetColumnType(c)'=10 tColNums(c,"type") = pRS.GetColumnType(c)
+			}
+		}
+	}
+
+	#; now walk over set of column spec objects 
+	Set tCount = ..columns.Count()
+	Set tHiddenCols = 0
+	For n=1:1:tCount {
+		Set tColumn = ..columns.GetAt(n)
+		Set tHidden = +$$$ZENVAL(tColumn.hidden)
+		Set tColName = $$$ZENVAL(tColumn.colName)
+		If (tColName '= "") {
+			#; find corresponding column in query
+			If ($D(tColNames(tColName))) {
+				Set c = tColNames(tColName)
+				If (tHidden) {
+					#; remove/skip column, add to hidden list
+					Set tHiddenCols = tHiddenCols + 1
+					Set tHiddenCols(tHiddenCols) = tColName
+					Kill tColNums(c)
+				}
+				Else {
+					If ('tColsFromQuery) {
+						#; add column
+						Set tColNums = tColNums + 1
+						Set tColNums(tColNums) = tColName
+						Set c = tColNums
+					}
+					#; add spec to column
+					Set tColNums(c,"spec") = tColumn
+				}
+			}
+			ElseIf ('tColsFromQuery) {
+				#; this is a named column with no data
+				Set tColNums = tColNums + 1
+				Set tColNums(c) = tColName
+				Set tColNums(tColNums,"spec") = tColumn
+			}
+		}
+		Else {
+			If ('tHidden) {
+				#; this is an unnamed column
+				Set tColNums = tColNums + 1
+				Set tColNums(tColNums,"spec") = tColumn
+			}
+		}
+	}
+
+	#; now build the list of columns to display
+	#; this is held in tColInfo
+	#; tColInfo(n)=type  (action,data,dataAction,selector,rownum)
+	#; tColInfo(n,"th")=header
+
+	Set tHasFilters = 0
+	Set tColCount = 0
+	If (..showRowSelector && ..rowSelect) {
+		Set tColCount = tColCount + 1
+		Set tColInfo(tColCount) = "selector"
+	}
+	If (..multiSelect) {
+		Set tColCount = tColCount + 1
+		Set tColInfo(tColCount) = "checkbox"
+	}
+	If (..showRowNumbers) {
+		Set tColCount = tColCount + 1
+		Set tColInfo(tColCount) = "rownum"
+	}
+
+	Set n = $O(tColNums(""))
+	While (n '= "") {
+		Set tColCount = tColCount + 1
+		Set tColumn = $G(tColNums(n,"spec"))
+
+		If ($G(tColNums(n)) '= "") {
+			#; there is data for this column
+			If $IsObject(tColumn) {
+				If (tColumn.link="") {
+					Set tColInfo(tColCount,"cls") = $S(..%IsTypeNumeric($G(tColNums(n,"type"))):"tpNum",1:"tpStr")
+					;p6++++++++
+					Set tColInfo(tColCount,"dataType") = tColNums(n,"type")
+					;p6--------
+					Set tColInfo(tColCount) = "data"
+				}
+				Else {
+					Set tColInfo(tColCount,"cls") = "tpAction"
+					Set tColInfo(tColCount) = "dataAction"
+					Set tColInfo(tColCount,"link") = tColumn.link
+					Set:tColumn.linkConfirm'="" tColInfo(tColCount,"confirm") = tColumn.linkConfirm
+				}
+				
+				Set tHeader = $$$ZENVAL(tColumn.header)
+				Set tWidth = $$$ZENVAL(tColumn.width)
+				Set tStyle = $$$ZENVAL(tColumn.style)
+
+				Set th = $S(tHeader'="":tHeader,1:$G(tColNums(n,"th"),tColNums(n)))
+				Set:tStyle'="" tColInfo(tColCount,"style") = tStyle
+				Set:tWidth'="" tColInfo(tColCount,"wid") = tWidth
+
+				Set:tColumn.title'="" tColInfo(tColCount,"title") = tColumn.title
+				Set:tColumn.cellTitle'="" tColInfo(tColCount,"cellTitle") = tColumn.cellTitle
+				Set:tColumn.OnDrawCell'="" tColInfo(tColCount,"method") = tColumn.OnDrawCell
+				Set:tColumn.seed'="" tColInfo(tColCount,"seed") = tColumn.seed
+
+				#; test for filter
+				If (tColumn.filterType '= "") {
+					Set tHasFilters = 1
+					Set tColInfo(tColCount,"filter") = tColumn
+				}
+			}
+			Else {
+				#; use different style for numeric columns
+				Set tColInfo(tColCount,"cls") = $S(..%IsTypeNumeric($G(tColNums(n,"type"))):"tpNum",1:"tpStr")
+				Set tColInfo(tColCount) = "data"
+				Set th = tColNums(n)
+			}
+			Set tColInfo(tColCount,"th") = th
+			Set tColInfo(tColCount,"src") = tColNums(n)
+		}
+		Else {
+			#; no data for this column; must be an action
+			Set tColInfo(tColCount) = "action"
+			Set tColInfo(tColCount,"cls") = "tpAction"
+			If $IsObject(tColumn) {
+				Set tHeader = $$$ZENVAL(tColumn.header)
+				Set tWidth = $$$ZENVAL(tColumn.width)
+				Set tStyle = $$$ZENVAL(tColumn.style)
+
+				Set:tHeader'="" tColInfo(tColCount,"th") = tHeader
+				Set:tWidth'="" tColInfo(tColCount,"wid") = tWidth
+				Set:tStyle'="" tColInfo(tColCount,"style") = tStyle
+
+				Set:tColumn.linkCaption'="" tColInfo(tColCount,"caption") = tColumn.linkCaption
+				Set:tColumn.title'="" tColInfo(tColCount,"title") = tColumn.title
+				Set:tColumn.link'="" tColInfo(tColCount,"link") = tColumn.link
+				Set:tColumn.cellTitle'="" tColInfo(tColCount,"cellTitle") = tColumn.cellTitle
+				Set:tColumn.linkConfirm'="" tColInfo(tColCount,"confirm") = tColumn.linkConfirm
+				Set:tColumn.OnDrawCell'="" tColInfo(tColCount,"method") = tColumn.OnDrawCell
+				Set:tColumn.seed'="" tColInfo(tColCount,"seed") = tColumn.seed
+			}
+		}
+
+		#; further preprocess some of the data
+		If $D(tColInfo(tColCount,"link")) {
+			#; see if link contains an expression
+			If (tColInfo(tColCount,"link")["#(") {
+				#; what type of escape to use?
+				Set tEsc = $S(tColInfo(tColCount,"link")["javascript:":"JS",1:"URL")
+				Set tColInfo(tColCount,"Xlink") = "S %out="_##class(%ZEN.Utils).%ParseExpr(tColInfo(tColCount,"link"),tEsc,2)
+				Kill tColInfo(tColCount,"link")
+			}
+			Else {
+				Set tColInfo(tColCount,"link") = " href="""_$ZCVT(tColInfo(tColCount,"link"),"O","HTML")_""""
+			}
+		}
+
+		If $D(tColInfo(tColCount,"cellTitle")) {
+			Set tColInfo(tColCount,"cellTitle") = " title="""_$ZCVT(tColInfo(tColCount,"cellTitle"),"O","HTML")_""""
+		}
+		If $D(tColInfo(tColCount,"wid")) {
+			//Set tColInfo(tColCount,"wid") = " width="""_tColInfo(tColCount,"wid")_""""
+		}
+
+		Set n = $O(tColNums(n))
+	}
+
+	#; build list of conditions for the table
+	#; organized by column name
+	For i=1:1:..conditions.Count() {
+		Set tCondition = ..conditions.GetAt(i)
+		If $IsObject(tCondition) {
+			Set tColName = $$$ZENVAL(tCondition.colName)
+			If (tColName '="") {
+				Set tCellStyle = $$$ZENVAL(tCondition.cellStyle)
+				Set tRowStyle = $$$ZENVAL(tCondition.rowStyle)
+				If (tCellStyle '= "") {
+					#; cell condition
+					Set tTargetCol = $$$ZENVAL(tCondition.targetCol)
+					Set tTarg = $S(tTargetCol'="":tTargetCol,1:tColName)
+					Set idx = 1 + $G(tCellCondition(tTarg))
+					Set tCellCondition(tTarg) = idx
+					Set tCellCondition(tTarg,idx) = tCondition
+				}
+				If (tRowStyle '= "") {
+					#; row condition
+					Set idx = 1 + $G(tRowCondition)
+					Set tRowCondition = idx
+					Set tRowCondition(idx) = tCondition
+				}
+			}
+		}
+	}
+
+	#; now draw the table
+	&html<<table class="tpTable" border="0" cellspacing="0" cellpadding="0">>
+	If (..caption'="") { &html<<caption>#($ZCVT(..caption,"O","HTML"))#</caption>> }
+	&html<<thead class="tpHead">>
+
+	#; width of special columns (rownum, etc.)
+	Set xWid = ..extraColumnWidth
+
+	#; draw headers based on layout
+	If (..headerLayout = "headersOnTop") {
+		Do DrawHeaders
+		Do DrawFilters
+	}
+	Else {
+		Do DrawFilters
+		Do DrawHeaders
+	}
+
+	Goto DrawBody	
+
+DrawFilters
+	#; draw filters
+	If (tHasFilters) {
+		&html<<tr valign="bottom" id="#(..%MakeId("filterRow"))#" #($S(..showFilters:"",1:"style=""display: none;"""))#>>
+		For n=1:1:tColCount {
+			Set tFilter = $G(tColInfo(n,"filter"))
+			Set src = $G(tColInfo(n,"src"))
+			If ($IsObject(tFilter) && (src'="")) {
+				&html<<th valign="bottom" nowrap width="#($G(tColInfo(n,"wid")))#">>
+				If (tFilter.filterType = "custom") {
+					#; invoke callback to draw filter
+					Do ..%DrawFilter(tFilter.OnDrawFilter,$G(tColInfo(n,"src")),tFilter)
+				}
+				Else { // built-in
+					Set dis = $S(..filtersDisabled:"disabled",1:"")
+					&html<<table class="tpFilterLayout" border="0" cellspacing="0" width="100%"><tr>>
+					If ((tFilter.filterType = "date")||(tFilter.filterType = "datetime")) {
+						If (tFilter.filterOp '= "BETWEEN") {
+							#; single date box
+							If (tFilter.filterLabel'="") {
+								&html<<td class="tpFilterLabel" width="5%">#($ZCVT(tFilter.filterLabel,"O","HTML"))#</td>>
+							}
+							&html<<td nowrap><input #(dis)# type="text" size="12" id="#(..%MakeId("filter1_"_src))#" #(..%Attr("title",tFilter.filterTitle))# class="tpFilterDate" value="#($ZCVT(tFilter.filterValue,"O","HTML"))#" onkeypress="zenPage.getComponent(#(..index)#).filterKeyPressed(event,'#(src)#','date',1);" onchange="zenPage.getComponent(#(..index)#).filterChanged('#(src)#',true,'date',1);"><input type="button" onclick="zenPage.getComponent(#(..index)#).showDateSelector('#(src)#',1,'#(tFilter.filterType)#');" class="tpFilterButton" value="..."/></td>>
+						}
+						Else {
+							#; show 2 boxes to allow range entry
+							Set t1 = $P(tFilter.filterValue,",",1)
+							Set t2 = $P(tFilter.filterValue,",",2)
+							Set c1 = $ZCVT($P(tFilter.filterLabel,",",1),"O","HTML")
+							Set c2 = $ZCVT($P(tFilter.filterLabel,",",2),"O","HTML")
+							If (c1'="") {
+								&html<<td class="tpFilterLabel" width="5%">#(c1)#</td>>
+							}
+							&html<<td nowrap><input #(dis)# type="text" size="12" id="#(..%MakeId("filter1_"_src))#" #(..%Attr("title",tFilter.filterTitle))# class="tpFilterDate" value="#($ZCVT(t1,"O","HTML"))#" onkeypress="zenPage.getComponent(#(..index)#).filterKeyPressed(event,'#(src)#','date',1);" onchange="zenPage.getComponent(#(..index)#).filterChanged('#(src)#',true,'date',1);"><input type="button" onclick="zenPage.getComponent(#(..index)#).showDateSelector('#(src)#',1,'#(tFilter.filterType)#');" class="tpFilterButton" value="..."/></td>>
+							&html<</tr><tr>>
+							If (c2'="") {
+								&html<<td class="tpFilterLabel" width="5%">#(c2)#</td>>
+							}
+							&html<<td nowrap><input #(dis)# type="text" size="12" id="#(..%MakeId("filter2_"_src))#" #(..%Attr("title",tFilter.filterTitle))# class="tpFilterDate" value="#($ZCVT(t2,"O","HTML"))#" onkeypress="zenPage.getComponent(#(..index)#).filterKeyPressed(event,'#(src)#','date',2);" onchange="zenPage.getComponent(#(..index)#).filterChanged('#(src)#',true,'date',2);"><input type="button" onclick="zenPage.getComponent(#(..index)#).showDateSelector('#(src)#',2,'#(tFilter.filterType)#');" class="tpFilterButton" value="..."/></td>>
+						}
+					}
+					ElseIf (tFilter.filterType = "enum") {
+						If (tFilter.filterLabel'="") {
+							&html<<td class="tpFilterLabel" width="5%">#($ZCVT(tFilter.filterLabel,"O","HTML"))#</td>>
+						}
+						&html<<td nowrap><select #(dis)# id="#(..%MakeId("filter1_"_src))#" #(..%Attr("title",tFilter.filterTitle))# class="tpFilter" onchange="zenPage.getComponent(#(..index)#).filterChanged('#(src)#',true);">>
+						&html<<option value=""></option>>
+						For p=1:1:$L(tFilter.filterEnum,",") {
+							Set ev = $P(tFilter.filterEnum,",",p)
+							Set ed = $S(tFilter.filterEnumDisplay="":ev,1:$P(tFilter.filterEnumDisplay,",",p))
+							&html<<option #($S(tFilter.filterValue=ev:"selected",1:""))# value="#($ZCVT(ev,"O","HTML"))#">#($ZCVT(ed,"O","HTML"))#</option>>
+						}
+						&html<</select></td>>
+					}
+					ElseIf (tFilter.filterType = "query") {
+						If (tFilter.filterLabel'="") {
+							&html<<td class="tpFilterLabel" width="5%">#($ZCVT(tFilter.filterLabel,"O","HTML"))#</td>>
+						}
+						#; execute the filter query
+						#; (do this as part of snapshot)
+						Set tError = ""
+						Set tFqValCol = 1
+						Set tFqDispCol = 1
+						If (tFilter.filterQuery = "") {
+							Set tError = "No query specified for filter"
+						}
+						Else {
+							Set tSC = $$$OK
+							Do {
+								Set tRS = ##class(%ResultSet).%New()
+								Set tSC = tRS.Prepare(tFilter.filterQuery)
+								If $$$ISERR(tSC) Quit
+
+								Set tSC = tRS.%Execute()
+								If $$$ISERR(tSC) Quit
+
+								If tRS.GetColumnCount() > 1 {
+									Set tFqDispCol = 2
+								}
+								
+							} While(0)
+							
+							If $$$ISERR(tSC) {
+								Do $System.Status.DecomposeStatus(tSC,.err)
+								Set tError = $G(err(1))
+							}
+						}
+						
+						If (tError = "") {
+							&html<<td nowrap><select #(dis)# id="#(..%MakeId("filter1_"_src))#" #(..%Attr("title",tFilter.filterTitle))# class="tpFilter" onchange="zenPage.getComponent(#(..index)#).filterChanged('#(src)#',true);">>
+							&html<<option value=""></option>>
+							While (tRS.%Next(.tSC)) {
+								If $$$ISERR(tSC) {
+									Do $System.Status.DecomposeStatus(tSC,.err)
+									Set tError = $G(err(1))
+									Quit
+								}
+								Set ev = tRS.GetData(tFqValCol)
+								&html<<option #($S(tFilter.filterValue=ev:"selected",1:""))# value="#($ZCVT(ev,"O","HTML"))#">#($ZCVT(tRS.GetData(tFqDispCol),"O","HTML"))#</option>>
+							}
+							&html<</select></td>>
+						}
+						Set tRS = ""
+
+						If (tError '= "") {
+							&html<<td style="color:red;">#(tError)#</td>>
+						}
+					}
+					Else {
+						If (tFilter.filterLabel'="") {
+							&html<<td class="tpFilterLabel" width="5%">#($ZCVT(tFilter.filterLabel,"O","HTML"))#</td>>
+						}
+						&html<<td nowrap><input #(dis)# type="text" id="#(..%MakeId("filter1_"_src))#" #(..%Attr("title",tFilter.filterTitle))# class="tpFilter" value="#($ZCVT(tFilter.filterValue,"O","HTML"))#" onkeypress="zenPage.getComponent(#(..index)#).filterKeyPressed(event,'#(src)#');" onchange="zenPage.getComponent(#(..index)#).filterChanged('#(src)#',true);"></td>>
+					}
+					&html<</tr></table>>
+				}
+				&html<</th>>
+			}
+			Else {
+				Set wid = $Case(tColInfo(n),"checkbox":xWid,"rownum":xWid,"selector":xWid,:$G(tColInfo(n,"wid")))
+				&html<<th width="#(wid)#">&nbsp;</th>>
+			}
+		}
+		#; add extra column for scrollbar
+		If (..fixedHeaders) { &html<<th width="#($S(tIE:"10px",1:"7px"))#">&nbsp;</th>> }
+	}
+	Quit
+DrawHeaders
+	#; draw headers
+	Set tUserColCount = 0
+
+	&html<<tr>>
+	For n=1:1:tColCount {
+		Set type = tColInfo(n)
+		If (type = "selector") {
+			&html<<th width="#(xWid)#" onclick="zenPage.getComponent(#(..index)#).headerClick('');">&nbsp;&nbsp;&nbsp;</th>>
+		}
+		ElseIf (type = "action") {
+			Set title = $S($G(tColInfo(n,"title"))="":"",1:" title="""_$ZCVT(tColInfo(n,"title"),"O","HTML")_"""")
+			&html<<th#(title)# #(..%Attr("width",$G(tColInfo(n,"wid"))))# onclick="zenPage.getComponent(#(..index)#).headerClick('');">&nbsp;#($ZCVT($G(tColInfo(n,"th")),"O","HTML"))#&nbsp;</th>>
+			Set tUserColCount = tUserColCount + 1
+		}
+		ElseIf (type = "checkbox") {
+			&html<<th width="#(xWid)#"><input type="checkbox" onclick="zenPage.getComponent(#(..index)#).cbHeaderClick(this);"/></th>>
+		}
+		ElseIf (type = "rownum") {
+			&html<<th width="#(xWid)#" onclick="zenPage.getComponent(#(..index)#).headerClick('');">&nbsp;#</th>>
+		}
+		Else {
+			Set tUserColCount = tUserColCount + 1
+			Set tName = $G(tColInfo(n,"src"))
+			Set cls = $S(..currColumn=tName:"class=""tpHdrSelected""",1:"")
+			Set srt = $S(..currColumn=tName:$S(..sortOrder="asc":"&raquo;",..sortOrder="desc":"&laquo;",1:""),1:"")
+			Set title = $S($G(tColInfo(n,"title"))="":"",1:" title="""_$ZCVT(tColInfo(n,"title"),"O","HTML")_"""")
+			&html<<th#(title)# #(cls)# #(..%Attr("width",$G(tColInfo(n,"wid"))))# id="#(..%MakeId("th_"_tName))#" onclick="zenPage.getComponent(#(..index)#).headerClick('#($ZCVT(tName,"O","JS"))#');">#($ZCVT($G(tColInfo(n,"th")),"O","HTML"))#&nbsp;#(srt)#</th>>
+		}
+	}
+	#; add extra column for scrollbar
+	If (..fixedHeaders) { &html<<th width="#($S(tIE:"10px",1:"7px"))#">&nbsp;</th>> }
+	&html<</tr></thead>>
+	Quit
+
+DrawBody
+	If (tIE && ..fixedHeaders) {
+		#; for ie, we use 2 tables for fixed header
+		&html<</table><div id="#(..%MakeId("tpBody"))#" class="tpBodyFixed" style="height: #(..bodyHeight)#;"><table class="tpTable" border="0" cellspacing="0" cellpadding="0"><tbody>>
+	}
+	Else {
+		If (..fixedHeaders) {
+			&html<<tbody id="#(..%MakeId("tpBody"))#" class="tpBodyFixed" style="height: #(..bodyHeight)#;">>
+		}
+		Else {
+			&html<<tbody class="tpBody" id="#(..%MakeId("tpBody"))#">>
+		}
+	}
+
+	#; draw rows
+	New %query,%out
+	Set tRow = 0 // row within page
+	Set tStartRow = (..currPage-1) * ..pageSize // starting query row for this page
+	Set tKey = ""
+	Set tVal = ""
+	Set tMaxRows = $S(..pageSize=0:..maxRows,1:..pageSize)
+	Set tSortOrder = $Case(..sortOrder,"asc":1,"desc":-1,:0)
+	If (..useSnapshot && tSortOrder && (..currColumn'="") && (..snapshotId'="")) {
+		#; find initial sort value
+		Set tVal = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"index",..currColumn,""),tSortOrder)
+	}
+	
+	#; get logical value of table
+	Set tLogicalVal = $$$ZENVAL(..value)
+
+	Set tMore = 1
+	While ((tMaxRows=0)||(tRow<tMaxRows)) {
+		#; get next row
+		If (..useSnapshot && (..snapshotId'="")) {
+			If (tSortOrder && (..currColumn'="") ) {
+				#; use sort index
+				Set tBeforeStart = (tRow=0)&&(tStartRow>0)
+				Set tqRow = 0 // row in query
+				If (tVal'="") {
+					Do {
+						Set tKey = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"index",..currColumn,tVal,tKey),tSortOrder)
+						If (tKey = "") {
+							#; try next value
+							Set tVal = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"index",..currColumn,tVal),tSortOrder)
+							Set:tVal'="" tKey = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"index",..currColumn,tVal,""),tSortOrder)
+						}
+						Set tqRow = tqRow + 1 
+					} While (tBeforeStart && (tqRow <= tStartRow)) // loop until we get to first displayed row
+				}
+
+				Quit:tKey=""
+				Set tSnapData = $G(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"data",tKey))
+			}
+			Else {
+				#; use main temp file
+				Set:(tRow=0)&&(tStartRow>0) tKey=(tStartRow)
+				Set tKey = $O(^CacheTemp.zenData(%session.SessionId,..snapshotId,..index,"data",tKey),1,tSnapData)
+				Quit:tKey=""
+			}
+		}
+		ElseIf $IsObject(pRS) {
+			If 'pRS.%Next(.tSC) {
+				Set tMore = 0
+				Quit
+			}
+			Quit:$$$ISERR(tSC)
+		}
+		Else {
+			Quit
+		}
+		Set tRow = tRow + 1
+
+		#; copy data for this row into %query
+		Kill %query
+		For n=1:1:tColCount {
+			#; get col value
+			Set tName = $G(tColInfo(n,"src"))
+			If (tName'="") {
+				If (..useSnapshot) {
+					Set c = tColNames(tName)
+					Set %query(tName) = $LG(tSnapData,c)
+				}
+				Else {
+					Set %query(tName) = $G(pRS.Data(tName))
+					Set:(%query(tName)=$c(0)) %query(tName) = ""
+				}
+			}
+		}
+
+		#; get data values for hidden columns
+		For n=1:1:tHiddenCols {
+			#; get col value
+			Set tName = $G(tHiddenCols(n))
+			If (tName'="") { 
+				If (..useSnapshot) {
+					Set c = tColNames(tName)
+					Set %query(tName) = $LG(tSnapData,c)
+				}
+				Else {
+					Set %query(tName) = $G(pRS.Data(tName))
+					Set:(%query(tName)=$c(0)) %query(tName) = ""
+				}
+			}
+		}
+
+		Set tStatus = ""
+
+		If (..showZebra) {
+			Set tStatus = $S(tRow#2=0:"tpEven",1:"tpOdd")
+		}
+		Else {
+			Set tStatus = "tpRow"
+		}
+
+		If (tStatus '= "") {
+			Set tRowCls = "class="""_tStatus_""""
+		}
+		Else {
+			Set tRowCls = ""
+		}
+
+		Set tRowStyle = ""
+
+		#; see if there are any row conditions
+		Set tName = $O(tRowCondition(""))
+		While (tName '= "") {
+			#; evaluate condition
+			Set tCondition = tRowCondition(tName)
+			Set tEval = tCondition.Eval(.%query)
+			If (tEval) {
+				Set tRowStyle = "style=""" _ $$$ZENVAL(tCondition.rowStyle) _ """"
+				Quit
+			}
+			Set tName = $O(tRowCondition(tName))
+		}
+
+		#; if there is a valueColumn, get it
+		Set tDataVal = ""
+		If (..valueColumn'="") {
+			Set v = $G(%query(..valueColumn))
+			If (v = tLogicalVal) {
+				#; this row matches the current value of the table
+				#; select it
+				Set ..selectedIndex = tRow - 1
+			}
+			Set tDataVal = "zenValue="""_$ZCVT(v,"O","HTML")_""""
+		}
+
+		&html<<tr #(tDataVal)# #(tRowCls)# #(tRowStyle)# id="#(..%MakeId("tr_"_(tRow-1)))#" onclick="zenPage.getComponent(#(..index)#).clickHandler(#(tRow-1)#);" ondblclick="zenPage.getComponent(#(..index)#).dblclickHandler();">>
+
+		Set tdwid = $S(tRow=1:" width="""_..extraColumnWidth_"""",1:"")
+
+		#; loop over columns
+		For n=1:1:tColCount {
+			Set type = tColInfo(n)
+			If (type = "selector") {
+				&html<<td class="tpSel" id="#(..%MakeId("selector_"_(tRow-1)))#"#(tdwid)#>&nbsp;</td>>
+			}
+			ElseIf (type = "checkbox") {
+				Set sel = $S($P(..selectedRows,",",tRow+tStartRow)'="":"checked",1:"")
+				&html<<td class="tpCB"#(tdwid)#><input type="checkbox" #(sel)# id="#(..%MakeId("cb_"_(tRow-1)))#" onclick="zenPage.getComponent(#(..index)#).cbClick(this,#(tRow-1)#);"/></td>>
+			}
+			ElseIf (type = "rownum") {
+				&html<<td class="tpRNum" align="right"#(tdwid)#>#(tRow+tStartRow)#</td>>
+			}
+			Else {
+				Set tADisabled = ""
+				Set tHREF = ""
+				Set tCellClass = $G(tColInfo(n,"cls"))
+				Set tCellStyle = $G(tColInfo(n,"style"))
+
+				#; see if there are cell conditions for this column
+				If ((type = "data")||(type = "dataAction")) {
+					Set idx = $O(tCellCondition(tColInfo(n,"src"),""))
+					While (idx '= "") {
+						#; evaluate condition
+						Set tCondition = tCellCondition(tColInfo(n,"src"), idx)
+						Set tEval = tCondition.Eval(.%query)
+						If (tEval) {
+							Set tCellStyle = tCellStyle _ $$$ZENVAL(tCondition.cellStyle)
+							If (tCondition.cellStyle [ "disabled") {
+								Set tADisabled = "disabled"
+							}
+							Quit
+						}
+						Set idx = $O(tCellCondition(tColInfo(n,"src"),idx))
+					}
+				}
+
+				If (..nowrap) {
+					Set tCellStyle = tCellStyle _ "white-space:nowrap;"
+				}
+				Set:tCellStyle'="" tCellStyle=" style="""_tCellStyle_""""
+				
+				#; IE does not recognize white-space: nowrap;
+				#; so we have special code for it
+				If (..nowrap) {
+					Set tCellStyle = tCellStyle _ " nowrap"
+				}
+				
+				If ((type = "data")||(type = "dataAction")) {
+					Set ttl = $S(..showValueInTooltip:" title="""_$ZCVT(%query(tColInfo(n,"src")),"O","HTML")_"""",1:$G(tColInfo(n,"cellTitle")))
+				}
+				Else {
+					Set ttl = $G(tColInfo(n,"cellTitle"))
+				}
+
+				#; don't use &html in inner loop to make sure HTML is tight and CR/LF free
+				#; add width information for first row
+				//Write "<td",$S(tCellClass="":"",1:" class="""_tCellClass_""""),tCellStyle,ttl,$S((tRow=1)&&($G(tColInfo(n,"wid"))]""):" width="""_$G(tColInfo(n,"wid"))_"""",1:""),">"
+				#;p6++++++++++
+				Write "<td",$S(tCellClass="":"",1:" class="""_tCellClass_""""),tCellStyle,ttl,$S((tRow=1)&&($G(tColInfo(n,"wid"))]""):" width="""_$G(tColInfo(n,"wid"))_"""",1:"")," id="""_..%MakeId("tr"_tRow_"td"_n)_""">"
+				#;p6----------
+				
+				If ($G(tColInfo(n,"method"))'="") {
+					//Do ..%DrawCell($G(tColInfo(n,"method")),$G(tColInfo(n,"src")),$G(tColInfo(n,"seed")))
+					;p6++++++++++++++++++
+					 Do ..%DrawCell($G(tColInfo(n,"method")),$G(tColInfo(n,"src")),$G(tColInfo(n,"seed")),tRow)
+					;p6------------------
+				}
+				Else {
+					If ((type = "action")||(type = "dataAction")) {
+						#; get link: see if we have to evaluate expr
+						If ($D(tColInfo(n,"Xlink"))) {
+							#; result is in %out
+							X tColInfo(n,"Xlink")
+							Set tHREF = " href="""_%page.%Link(%out)_""""
+						}
+						Else {
+							Set tHREF = %page.%Link($G(tColInfo(n,"link")))
+						}
+	
+						#; test for confirm message
+						If ($D(tColInfo(n,"confirm"))) {
+							Set tConfirm = "onclick=""return confirm('" _ $ZCVT($ZCVT(tColInfo(n,"confirm"),"O","HTML"),"O","JS") _ "');"""
+						}
+						Else {
+							Set tConfirm = ""
+						}
+	
+						Write "<a",tHREF,$G(tColInfo(n,"cellTitle")),tADisabled,tConfirm,">"
+					}
+
+					If ((type = "data")||(type = "dataAction")) {
+						#; data value
+						Set tDataVal = %query(tColInfo(n,"src"))
+                        ;p6+++++
+                        if $G(tColInfo(n,"dataType"),"")'="" {
+                            if (tColInfo(n,"dataType")=16) { //Boolean
+                                Write $S(tDataVal="":"&nbsp;",tDataVal="0":"&nbsp;",1:"Да")
+                            }elseif  (tColInfo(n,"dataType")=15)||(tColInfo(n,"dataType")=3) { // DOUBLE || CURRENCY
+                                Write $S(+tDataVal=0:"&nbsp;",1:##class(p6.UrlUtils).ConvertCurrency2(tDataVal,","," "))
+                            }else {
+                                Write $S(tDataVal="":"&nbsp;",1:$ZCVT(tDataVal,"O","HTML"))
+                            }
+                        }else {
+                        	Write $S(tDataVal="":"&nbsp;",1:$ZCVT(tDataVal,"O","HTML"))
+						}
+	                    ;p6-----
+					}
+					Else {
+						#; action caption (if we have a link and no caption, show "link")
+						Set tCaption = $G(tColInfo(n,"caption"),$S($G(tHREF)="":"",1:"link"))
+						Write $S(tCaption="":"&nbsp;",1:$ZCVT(tCaption,"O","HTML"))
+					}
+	
+					If ((type = "action")||(type = "dataAction")) {
+						Write "</a>"
+					}
+				}
+				&html<</td>>
+			}
+		}
+		&html<</tr>>
+	}
+
+	If ((tRow = 0)&&(..initialExecute)) {
+		#; draw indicator of no results (unless deferred executed)
+		Set msgNoResults = $$$TextHTML("No results")
+		&html<<td colspan="#(tColCount-tUserColCount)#" width="1%">&nbsp;</td>>
+		&html<<td colspan="#(tUserColCount)#" width="99%" class="tpNoResults">&nbsp;#(msgNoResults)#</td>>
+	;+++++ P6
+	} else {
+		$$$QuitOnError(..DrawBottomRow())
+	;----- P6
+	}
+
+	#; if not in snapshot mode, update rowCount
+	If ('..useSnapshot) {
+		Set ..rowCount = tRow _ $S(tMore:"+",1:"")
+	}
+
+	&html<</tbody></table>>
+	If (tIE && ..fixedHeaders) { &html<</div>> }
+
+	Kill %query
+	Quit tSC
+]]></Implementation>
+</Method>
+
+<Method name="DrawBottomRow">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if '..initialExecute quit $$$OK
+	set visualNum=0,selectStatement=""
+	if ..multiSelect set visualNum=1
+	for i=1:1:..columns.Count() {
+		set Column = ..columns.GetAt(i)
+		if 'Column.hidden set visualNum=visualNum+1
+		if 'Column.%IsA("p6.zen.auxiliary.column") continue
+		if Column.isAggregated {
+			set expr=$select(Column.colExpression]"":Column.colExpression,1:Column.field)
+			set sum(visualNum)=expr
+			set selectStatement=selectStatement_", sum("_expr_")"
+		}
+	}
+	if '$data(sum) quit $$$OK ;# Nothing to do
+	set $extract(selectStatement,1)=""
+	set totalVisualNum=visualNum
+	
+	set Rs=##class(%ResultSet).%New()
+	set Rs.RuntimeMode=2
+	set sqlString="select "_selectStatement_" from "_..tableName
+	set:..whereClause]"" sqlString=sqlString_" where "_$$$ZENVAL(..whereClause)
+	$$$QuitOnError(Rs.Prepare(sqlString))
+	$$$QuitOnError(Rs.Execute())
+	do Rs.Next()
+	
+	
+	if ..multiSelect {
+		&html<<tr>>
+		if '$data(sum(1)) {
+			set initialSpan=$order(sum(""))-1
+			&html<<td colspan=#(initialSpan)#>Итого выбрано:</td>>
+		}       
+		
+		set visualNum="",i=0
+		for {
+			set i=i+1
+			set visualNum=$order(sum(visualNum))
+			quit:visualNum=""
+			&html<<td id="#(..%MakeId("tdAggCol"_$P(..aggCols,",",i)))#" align="right">0</td>>
+			set nextVisualNum=$order(sum(visualNum))
+			if nextVisualNum="" set nextVisualNum=totalVisualNum+1
+			set spanCount=nextVisualNum-visualNum-1
+			if spanCount>0 {
+				&html<<td colspan=#(spanCount)#>&nbsp;</td>>
+			}   
+		}   
+		&html<</tr>>
+	}
+	
+	&html<<tr class="tpBottomRow">>
+	
+	; Skip "total" statement if we have value in first column
+	if '$data(sum(1)) {
+		set initialSpan=$order(sum(""))-1
+		&html<<td colspan=#(initialSpan)#>Итого:</td>>
+	}
+	set visualNum="",i=0
+	for {
+		set i=i+1
+		set visualNum=$order(sum(visualNum))
+		quit:visualNum=""
+		&html<<td align="right">#($s(+Rs.GetData(i)'=0:##class(p6.UrlUtils).ConvertCurrency2(Rs.GetData(i)),1:"&nbsp;"))#</td>>
+		set nextVisualNum=$order(sum(visualNum))
+		if nextVisualNum="" set nextVisualNum=totalVisualNum+1
+		set spanCount=nextVisualNum-visualNum-1
+		if spanCount>0 {
+			&html<<td colspan=#(spanCount)#>&nbsp;</td>>
+		}
+	}
+	&html<</tr>>
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="printIt">
+<Description>
+Печать
+mode:
+1-Текстовой процессор
+2-Таблицы</Description>
+<FormalSpec>mode,header</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if(mode=="") mode="1";
+	var data=this.PrintItToFile(mode,header);
+	var repSetting=this.GetReportSetting();
+	OpenWindow("p6.csp.Print.cls?DataFrom="+escape(data)+"&Mode="+mode+"&ReportSet="+repSetting);
+]]></Implementation>
+</Method>
+
+<Method name="PrintItToFile">
+<FormalSpec>mode:%String,header:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	Set oldio=$IO
+	Set tmpdir=##class(%File).NormalizeDirectory(^%SYS("TempDir"))
+	Set filename = tmpdir_##class(%FileBinaryStream).NewFileName("tmp",^%SYS("TempDir"))
+	Open filename:("NW")
+	Use filename
+	set oldPageSize=..pageSize
+	set oldUseKays=..useKeys
+	set ..pageSize=..rowCount
+	//Чтобы пропал НЕВИДИМЫЙ INPUT
+	set ..useKeys=$$$NO
+	if header'="" w "<center><font size=+2><b>"_$$$ZENVAL(header)_"</b></font></center>"
+	do ..%DrawHTML()
+	Close filename
+	Use oldio
+	set ..pageSize=oldPageSize
+	set ..useKeys=oldUseKays
+	Quit filename
+]]></Implementation>
+</Method>
+
+<Method name="GetReportSetting">
+<ReturnType>%Integer</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	set Session=##class(admin.Session).GetCurrent()
+	if Session="" quit 0
+	quit Session.UserSys.ReportMode
+]]></Implementation>
+</Method>
+
+<Method name="selectMultiRow">
+<Description><![CDATA[
+For multi-select tables, select/unselect the given row
+based on the value of <var>flag</var>.
+Updates the corresponding checkbox.]]></Description>
+<FormalSpec>row,flag</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	    // convert local row # to set of all rows
+			    var idx = row;
+			    if (!isNaN(this.pageSize)) {
+			        idx = row + ((this.currPage-1) * this.pageSize);
+			    }
+			
+	    // try to find logical value of selected row
+    	// if the given row is not available on the client, do not select.
+	    var val = '';
+	    var tr = this.findElement("tr_" + row);
+	    if (tr) {
+	        val = tr.getAttribute('zenValue');
+	    }
+	
+	    var list = this.selectedRows.split(',');
+	    list[idx] = flag ? val : '';
+	
+	    this.selectedRows = list.join(',');
+	
+	    // find checkbox in this page
+	    var rcb = this.findElement('cb_'+row);
+	    if (rcb) {
+	        rcb.checked = flag;
+	    }
+		if(this.multiSelect)
+		{
+		    for(i=1;i<=Length(this.aggCols,",");i++)
+		    {
+		        var colNum=Piece(this.aggCols,",",i);
+		        var sumDiv = this.window.document.getElementById(this.makeId("tdAggCol"+colNum));
+	    	    var dataDiv = this.window.document.getElementById(this.makeId("tr"+(row+1)+"td"+colNum));
+	
+		        if((sumDiv!=null) && (dataDiv!=null))
+		        {
+	    	        if(flag)
+	        	    {
+		        	    var res=parseFloat(sumDiv.innerHTML)+parseFloat(dataDiv.innerHTML);
+	            	    sumDiv.innerHTML=res.toFixed(2);
+		            }else {
+		        	    var res=parseFloat(sumDiv.innerHTML)-parseFloat(dataDiv.innerHTML);
+	            	    sumDiv.innerHTML=res.toFixed(2);
+	    	        }
+	        	}
+	    	}
+		}
+]]></Implementation>
+</Method>
+
+<Property name="aggCols">
+<Description>
+Аггрегируемые колонки через ","</Description>
+<Type>%ZEN.Datatype.string</Type>
+</Property>
+
+<Method name="selectAllMultiRows">
+<Description><![CDATA[
+For multi-select tables, mark all (visible) rows as 
+selected or unselected depending on the value of <var>flag</var>.]]></Description>
+<FormalSpec>flag</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var rowCount = ('' == this.pageSize || 0 == this.pageSize) ? parseInt(this.rowCount.split(' ')[0]) : this.pageSize;
+		for (var row = 0; row < rowCount; row++) {
+			this.selectMultiRow(row, flag);
+		}
+		this.updateSelectedSum();
+]]></Implementation>
+</Method>
+
+<Method name="updateSelectedSum">
+<FormalSpec>flag</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	    for(var row=1;row<=this.rowCount;row++)
+	    {
+	        for(var i=1;i<=Length(this.aggCols,",");i++)
+	        {
+	            var colNum=Piece(this.aggCols,",",i);
+	            var sumDiv = this.window.document.getElementById(this.makeId("tdAggCol"+colNum));
+	            var dataDiv = this.window.document.getElementById(this.makeId("tr"+row+"td"+colNum));
+	            
+	            if((sumDiv!=null) && (dataDiv!=null))
+	            {
+		            if(row==1) sumDiv.innerHTML="0";
+		            if(Piece(this.selectedRows,",",row)!="")
+        	    	{
+		        	    var res=parseFloat(sumDiv.innerHTML)+parseFloat(dataDiv.innerHTML);
+	            	    sumDiv.innerHTML=res.toFixed(2);
+	            	}
+	            }
+	        }       
+	    }
+]]></Implementation>
+</Method>
+
+<Method name="%DrawCell">
+<Description>
+Invoke user method to provide contents for a cell</Description>
+<FormalSpec>pMethod:%String,pName:%String,pSeed:%String,aRow:%Integer=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set $ZT="Trap"
+	Set tSC = $$$OK
+
+	#; invoke method
+	Set tHost = $S($IsObject(..composite):..composite,1:$G(%page))
+	If ($IsObject(tHost) && (pMethod '= "")) {
+		Set tSC = $zobjmethod(tHost,pMethod,%this,pName,pSeed,aRow)
+	}
+Done
+	Quit tSC
+Trap
+	Set $ZT=""
+	Set tSC = $$$ERROR($$$GeneralError,$ZE)
+	Write $ZCVT($ZE,"O","HTML")
+	Goto Done
+]]></Implementation>
+</Method>
+
+<Method name="FetchCellFromSnapshot">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pIndex:%Integer,pID:%String,pCol:%String,pRow:%Integer,pCurrColumn:%String="",pSortOrder:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	    #; if table is sorted, find actual row ID # first
+	    If (pCurrColumn = "") {
+	        Set tRow = pRow
+	    }
+	    Else {
+	        #; find n-th element in index (as there is no cross-index)
+	        Set tSortOrder = $Case(pSortOrder,"asc":1,"desc":-1,:1)
+	        Set tRow = ""
+	        Set n = 0
+	        Set tVal = $O(^CacheTemp.zenData(%session.SessionId,pID,pIndex,"index",pCurrColumn,""),tSortOrder)
+	        While (tVal '= "") {
+	            Set tKey = $O(^CacheTemp.zenData(%session.SessionId,pID,pIndex,"index",pCurrColumn,tVal,""),tSortOrder)
+	            While (tKey '= "") {
+	                Set n = n + 1
+	                If (n = pRow) {
+	                    Set tRow = tKey
+	                    Quit
+	                }
+	                Quit:(n=pRow)
+	                Set tKey = $O(^CacheTemp.zenData(%session.SessionId,pID,pIndex,"index",pCurrColumn,tVal,tKey),tSortOrder)
+	            }
+	            Quit:(tRow'="")
+	            Set tVal = $O(^CacheTemp.zenData(%session.SessionId,pID,pIndex,"index",pCurrColumn,tVal),tSortOrder)
+	        }
+	    }
+	
+	    #; get data row from snapshot
+	    Set tData = ""
+	    Set:tRow'="" tData = $G(^CacheTemp.zenData(%session.SessionId,pID,pIndex,"data",tRow))
+	
+	    If (tData="") {
+	        Quit ""
+	    }
+	
+	    quit $LIST(^CacheTemp.zenData(%session.SessionId,pID,pIndex,"data",tRow),"1")
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.ClassDefinition">
+<Description>
+*********************************************************************************
+**
+**
+**    Класс для работы с определениями классов, свойств и т.п.
+**
+**
+*********************************************************************************</Description>
+<ClassType/>
+<IncludeCode>%occCompiler,%occReferenceStorage</IncludeCode>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Library.RegisteredObject</Super>
+<TimeCreated>59071,68807</TimeCreated>
+
+<Method name="UpdateData">
+<Description>
+делает глобаль - определение классов и их свойств
+работать с этой глобалью можно только через методы</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="IsClassPersistent">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+  quit $$$comClassKeyGet(className,$$$cCLASSclasstype)="persistent"
+]]></Implementation>
+</Method>
+
+<Method name="IsClassSerial">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+  quit $$$comClassKeyGet(className,$$$cCLASSclasstype)="serial"
+]]></Implementation>
+</Method>
+
+<Method name="GetClassDescription">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+  quit $$$comClassKeyGet(className,$$$cCLASSdescription)
+]]></Implementation>
+</Method>
+
+<Method name="GetClassCaption">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+  set result=$$$comMemberKeyGet(className,$$$cCLASSparameter,"CAPTION",$$$cPARAMdefault)
+  if result="" set result=$$$comClassKeyGet(className,$$$cCLASSdescription)
+  if result="" set result=className
+  quit result
+]]></Implementation>
+</Method>
+
+<Method name="GetClassSecureType">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSparameter,"SecureType",$$$cPARAMdefault)
+]]></Implementation>
+</Method>
+
+<Method name="GetClassSuper">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+  quit $$$defClassKeyGet(className,$$$cCLASSsuper)
+]]></Implementation>
+</Method>
+
+<Method name="GetParameter">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",parameterName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (parameterName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSparameter,parameterName,$$$cPARAMdefault)
+]]></Implementation>
+</Method>
+
+<Method name="GetPropertyList">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String=""</FormalSpec>
+<ReturnType>%List</ReturnType>
+<Implementation><![CDATA[
+  if (className="") quit ""
+
+  set Rs=##class(%ResultSet).%New("%Dictionary.CompiledProperty:Summary")
+  do Rs.Prepare()
+  do Rs.Execute(className)
+  
+  set plist=""
+  while (Rs.Next())
+  {
+    if Rs.Get("Name")'["%" set plist = plist_$ListBuild(Rs.Get("Name"))
+  }
+
+  quit plist
+]]></Implementation>
+</Method>
+
+<Method name="GetPropertyType">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+
+  do ##class(p6.ClassDefinition).CorrectData(.className,.propertyName)
+
+  // если свойство простое, то сразу берем из глобали
+  // если составное - то прыгаем по глобали
+  if ($length(propertyName,".")=1)
+  {
+    set propertyType = $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPtype)
+  }
+  else
+  {
+    set propertyType = className
+    for i=1:1:$length(propertyName,".")
+    {
+      set str = $piece(propertyName,".",i)
+      if ((propertyType="") || (str="")) quit
+      set propertyType = $$$comMemberKeyGet(propertyType,$$$cCLASSproperty,str,$$$cPROPtype)
+    }
+  }
+  quit propertyType
+]]></Implementation>
+</Method>
+
+<Method name="GetPropertyCaption">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+
+
+  do ##class(p6.ClassDefinition).CorrectData(.className,.propertyName)
+
+  // если свойство простое, то сразу берем из глобали
+  // если составное - то прыгаем по глобали
+  if ($length(propertyName,".")=1)
+  {
+	 set propertyCaption = $$$comMemberArrayGet(className,$$$cCLASSproperty,propertyName,$$$cPROPparameter,"CAPTION")
+    if propertyCaption="" set propertyCaption = $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPdescription)
+  }
+  else
+  {
+    set propertyType = className, propertyCaption = ""
+    for i=1:1:$length(propertyName,".")-1
+    {
+      set str = $piece(propertyName,".",i)
+      if ((propertyType="") || (str="")) quit
+      set propertyType = $$$comMemberKeyGet(propertyType,$$$cCLASSproperty,str,$$$cPROPtype)
+    }
+    set propertyName = $piece(propertyName,".",$length(propertyName,"."))
+	 set propertyCaption = $$$comMemberArrayGet(className,$$$cCLASSproperty,propertyName,$$$cPROPparameter,"CAPTION")
+    if propertyCaption="" set propertyCaption = $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPdescription)
+  }
+  
+  if propertyCaption="" quit propertyName
+  quit propertyCaption
+]]></Implementation>
+</Method>
+
+<Method name="GetPropertyCollection">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPcollection)
+]]></Implementation>
+</Method>
+
+<Method name="GetPropertySequenceNumber">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPsequencenumber)
+]]></Implementation>
+</Method>
+
+<Method name="IsPropertyRequired">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPrequired)
+]]></Implementation>
+</Method>
+
+<Method name="IsPropertyCalculated">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPcalculated)
+]]></Implementation>
+</Method>
+
+<Method name="IsPropertyTransient">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPtransient)
+]]></Implementation>
+</Method>
+
+<Method name="IsPropertyPrivate">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSproperty,propertyName,$$$cPROPprivate)
+]]></Implementation>
+</Method>
+
+<Method name="IsIntegrityForProperty">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",propertyName:%String=""</FormalSpec>
+<ReturnType>p6.dt.Boolean</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (propertyName="")) quit ""
+  set str =""
+  set str = $$$comMemberKeyGet(className,$$$cCLASSparameter,"NotIntegrityProperties",$$$cPARAMdefault)
+  quit $find(","_str_",",","_propertyName_",")=0
+]]></Implementation>
+</Method>
+
+<Method name="CorrectData">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&className:%String="",&propertyName:%String=""]]></FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA[
+  // убираем пробелы в имени свойства и имени класса
+  set propertyName = $translate(propertyName," ",""), 
+  className = $translate(className," ","")
+  // заменяем разделитель "->" на "."
+  set propertyName = ##class(p6.Convert).Replace(propertyName,"->",".")
+]]></Implementation>
+</Method>
+
+<Method name="GetIndexDescription">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>className:%String="",indexName:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+  if ((className="") || (indexName="")) quit ""
+  quit $$$comMemberKeyGet(className,$$$cCLASSindex,indexName,$$$cINDEXdescription)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.rb.Definition">
+<Description>
+Определение идентификатора</Description>
+<ClassType>persistent</ClassType>
+<Super>p6.Integrity</Super>
+<TimeCreated>60463,72542.753824</TimeCreated>
+
+<Index name="AkaIndex">
+<IdKey>1</IdKey>
+<Properties>Aka</Properties>
+</Index>
+
+<Property name="Aka">
+<Type>%String</Type>
+</Property>
+
+<Property name="Description">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="200"/>
+</Property>
+
+<Property name="IsYellow">
+<Type>p6.dt.Boolean</Type>
+</Property>
+
+<Method name="SaveData">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set File=##class(%File).%New("c:\vssdb\"_$znspace_"\data\p6.rb.Definition.txt")
+	$$$QuitOnError(File.Open("WSN"))
+	&sql(declare cur1 cursor for 
+		select Aka,Description,IsYellow 
+		into :qAka,:qDescription,:qIsYellow
+		from p6_rb.Definition
+	)
+	&sql(open cur1)
+	for  {
+		&sql(fetch cur1)
+		quit:SQLCODE'=0
+		do File.WriteLine(qAka_"*"_qIsYellow_"*"_qDescription)
+	}
+	&sql(close cur1)
+	do File.Close()
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="LoadData">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	$$$QuitOnError(..%KillExtent())
+	set File=##class(%FileCharacterStream).%New()
+	set File.Filename="c:\vssdb\"_$znspace_"\data\p6.rb.Definition.txt"
+	set scAll=$$$OK
+	set ^CacheTemp.IsLoad=1
+	while 'File.AtEnd {
+		set line=File.ReadLine()
+		set Def=..%New()
+		set Def.Aka=$piece(line,"*",1)
+		set Def.IsYellow=$piece(line,"*",2)
+		set Def.Description=$piece(line,"*",3,100)
+		set scAll=$system.Status.AppendStatus(scAll,Def.Save())
+	}
+	kill ^CacheTemp.IsLoad
+	quit scAll
+]]></Implementation>
+</Method>
+
+<Method name="OnAfterSave">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if '$data(^CacheTemp.IsLoad) $$$QuitOnError(..SaveData())
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^p6.rb.DefinitionD</DataLocation>
+<DefaultData>DefinitionDefaultData</DefaultData>
+<IdLocation>^p6.rb.DefinitionD</IdLocation>
+<IndexLocation>^p6.rb.DefinitionI</IndexLocation>
+<StreamLocation>^p6.rb.DefinitionS</StreamLocation>
+<Data name="DefinitionDefaultData">
+<Structure>listnode</Structure>
+<Subscript/>
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>Description</Value>
+</Value>
+<Value name="3">
+<Value>IsYellow</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+</Export>

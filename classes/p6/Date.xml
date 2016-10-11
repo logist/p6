@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.Date">
+<Description>
+Преобразование даты </Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Library.RegisteredObject</Super>
+<TimeCreated>59071,68810</TimeCreated>
+
+<Method name="GetYear">
+<Description>
+возвращает год</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=+$horolog</FormalSpec>
+<ReturnType>%Numeric</ReturnType>
+<Implementation><![CDATA[
+	set year = $piece($zdate(date,3),"-",1)
+   quit year
+]]></Implementation>
+</Method>
+
+<Method name="GetMonth">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=+$horolog</FormalSpec>
+<ReturnType>%Numeric</ReturnType>
+<Implementation><![CDATA[
+	set month = $piece($zdate(date,3),"-",2)
+	// убрать нуль, если число
+	if (+month>0) {set month = +month}
+   quit month
+]]></Implementation>
+</Method>
+
+<Method name="GetDay">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=+$horolog</FormalSpec>
+<ReturnType>%Numeric</ReturnType>
+<Implementation><![CDATA[
+	set day = $piece($zdate(date,3),"-",3)
+   quit day
+]]></Implementation>
+</Method>
+
+<Method name="GetFirstDayOfYear">
+<Description>
+возвращает дату = первое число того месяца который в date</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+	if (date="") { quit "" } //#
+	set dateString = $zdate(date,3)
+   set $piece(dateString,"-",2)="01"
+   set $piece(dateString,"-",3)="01"
+   quit $zdateh(dateString,3)
+]]></Implementation>
+</Method>
+
+<Method name="GetLastDigitOfYear">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	if (date="") { quit "" } //#
+	set dateString = $zdate(date,4)
+   quit $extract(dateString,$length(dateString))
+]]></Implementation>
+</Method>
+
+<Method name="GetFirstDayOfMonth">
+<Description>
+возвращает дату = первое число того месяца который в date</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+	if (date="") { quit "" } //#
+	set dateString = $zdate(date,3)
+   set $piece(dateString,"-",3)="01"
+   quit $zdateh(dateString,3)
+]]></Implementation>
+</Method>
+
+<Method name="GetFirstDayOfPreviosMonth">
+<Description>
+возвращает дату = первое число того месяца который перед месяцем в date</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+	if (date="") quit ""
+	set dateString = $zdate(date,3)
+   set $piece(dateString,"-",3)="01"
+	set month = $Piece(dateString,"-",2)
+   if (+month=1) {
+	   set year = $Piece(dateString,"-",1)
+      set $piece(dateString,"-",2)="12"
+      set $piece(dateString,"-",1)=year-1
+   }
+   else { set $piece(dateString,"-",2)=month-1 }
+   quit $zdateh(dateString,3)
+]]></Implementation>
+</Method>
+
+<Method name="GetFirstDayOfNextMonth">
+<Description>
+возвращает дату = первое число того месяца который после месяца в date</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date:p6.dt.Date=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+	if (date="") quit ""
+	set dateString = $zdate(date,3)
+   set $piece(dateString,"-",3)="01"
+	set month = $Piece(dateString,"-",2)
+   if (+month=12) {
+	   set year = $Piece(dateString,"-",1)
+      set $piece(dateString,"-",2)="01"
+      set $piece(dateString,"-",1)=year+1
+   }
+   else { set $piece(dateString,"-",2)=month+1 }
+   quit $zdateh(dateString,3)
+]]></Implementation>
+</Method>
+
+<Method name="DisplayToLogical">
+<Description>
+УСТАРЕЛО. Пользуйтесь классом p6.dt.Date.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>dateExt:%String=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+ //нет диагностики неверного ввода!!!
+ if (dateExt="") { quit "" } //#
+ if ($extract(dateExt)="=") { quit +$horolog } //# текущая дата
+ if "-+"[$extract(dateExt) {
+	 set date=$horolog+dateExt
+	 quit date //# смещение от текущей даты
+ }
+ set dateExt=$translate(dateExt," -/,*+","......")
+ set dd=+$piece(dateExt,".",1)
+ set mm=$piece(dateExt,".",2)
+ set yy=$piece(dateExt,".",3)
+ // если год или месяц пустые - то взять текущие
+ if (yy="") { set date=$zdate(+$h),yy=$piece(date,"/",3) }
+ if (mm="") { set mm=$piece(date,"/",1) }
+ set mm=+mm,yy=+yy
+ // если год 1 или 2 цифры, то до 19 2000 (2000-2019), иначе 1900 (1920-1999)
+ if ($length(yy)<3) { if (yy<20) { set yy=yy+2000 } else  { set yy=yy+1900 } }
+ set date=mm_"/"_dd_"/"_yy
+ quit $zdateh(date,,,,,,,,"")
+ //# shu 000704, 001126, 010205, 020102, 020726, 031125
+]]></Implementation>
+</Method>
+
+<Method name="HToTimeStamp">
+<Description>
+Преобразование в формате $horolog в тип данных %TimeStamp
+   устаревшее имя - убрать из системы shu 031213</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=""</FormalSpec>
+<ReturnType>%TimeStamp</ReturnType>
+<Implementation><![CDATA[ quit (..LogicalToTimeStamp(arg))
+]]></Implementation>
+</Method>
+
+<Method name="LogicalToTimeStamp">
+<Description>
+Преобразование в формате $horolog в тип данных %TimeStamp</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=""</FormalSpec>
+<ReturnType>%TimeStamp</ReturnType>
+<Implementation><![CDATA[
+ if (arg="") { quit "" } //#
+ set date=$zdate(arg,3,,,,,,,"error")
+ set time=+$piece(arg,",",2)
+ if (time=0) { set time="00:00:00" }
+ else { 
+ 	set h=$justify(time#86400\3600,2),m=$justify(time#3600\60,2),
+ 		s=$justify(time#60,2),time=h_":"_m_":"_s,time=$tr(time," ",0)
+ }
+ quit (date_" "_time)
+]]></Implementation>
+</Method>
+
+<Method name="LogicalToReportTime">
+<Description>
+Преобразование в формате $horolog в строку DD.MM.YY HH:MM
+  (обычно для печати отчета)
+  перенесен в p6.Horolog 031219</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=$horolog</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[ quit (##class(p6.Horolog).LogicalToReportTime(arg))
+]]></Implementation>
+</Method>
+
+<Method name="LogicalTo10Rus">
+<Description>
+Преобразование %var в формате $horolog в тип данных DD-MM-YYYY</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=""</FormalSpec>
+<ReturnType>%TimeStamp</ReturnType>
+<Implementation><![CDATA[
+ if (arg="") { quit "" } //#
+ set date=$zdate(arg,3,,,,,,,"error")
+ if (date="error") { quit date } //#
+ set y=+date, m=$piece(date,"-",2), d=$piece(date,"-",3)
+ set date=d_"-"_m_"-"_y
+ quit date
+]]></Implementation>
+</Method>
+
+<Method name="LogicalToFullRus">
+<Description>
+Преобразование %var в формате $horolog в тип данных DD MMMMMMMM YYYY</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=""</FormalSpec>
+<ReturnType>%TimeStamp</ReturnType>
+<Implementation><![CDATA[
+ if (arg="") { quit "" } //#
+ set date=$zd(arg,3,,,,,,,"error")
+ if (date="error") { quit date } //#
+ set y=+date, m=$piece(date,"-",2), d=$piece(date,"-",3)
+ set m=$piece("января февраля марта апреля мая июня июля августа сентября октября ноября декабря"," ",m)
+ set date=d_" "_m_" "_y
+ quit date
+]]></Implementation>
+</Method>
+
+<Method name="LogicalToDisplay">
+<Description><![CDATA[
+Преобразует значение <var>dateIntl</var> из логического формата <code>$H</code> 
+в отображаемую строку вида ДД.ММ.ГГ[ГГ]
+если 2 агумент=1 всегда выдается год в 4 знака.
+если 2 аргумент=0 (по умолчанию) то с 1920 по 2019 выдается два последних знака]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>dateInt:p6.dt.Date="",is4:p6.dt.Boolean=0</FormalSpec>
+<ReturnType>%CacheString</ReturnType>
+<Implementation><![CDATA[
+ if (dateInt="") { quit "" } //#
+ if (dateInt'?5n) { quit "!date: ["_dateInt_"]" } //# неверный внутренний формат (до 2114)
+ set dl=$zdate(dateInt) ;mm/dd/yy[yy]
+ set yy=$piece(dl,"/",3)
+ if (yy<100) { s yy=yy+1900 }
+ if (('is4) && (yy>1919) && (yy<2020)) { set yy=$extract(yy,3,4) } //урезать до 2 знаков
+ set dd=$piece(dl,"/",2)_"."_$piece(dl,"/")_"."_yy
+ quit dd ;#
+ ;# shu 000101, 001126, 010206, 031213
+]]></Implementation>
+</Method>
+
+<Method name="GetBeginOfMonth">
+<Description>
+дата начала указанного месяца</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>year:%String="",month:%String=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+	if (year="") { set year = $piece($zdate(+$horolog,3),"-",1) }
+	if (month="") { set month = $piece($zdate(+$horolog,3),"-",2) }
+	set year = +year, month = +month
+	if (year<100) {
+		if (year<20) { set year = 2000 + year }
+		else { set year = 1900 + year }
+	}
+	quit $zdateh(month_"/1/"_year)
+]]></Implementation>
+</Method>
+
+<Method name="GetEndOfMonth">
+<Description>
+дата окончания указанного месяца</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>year:%Integer="",month:%Integer=""</FormalSpec>
+<ReturnType>p6.dt.Date</ReturnType>
+<Implementation><![CDATA[
+	if (year="") { set year = $piece($zdate(+$horolog,3),"-",1) }
+	if (month="") { set month = $piece($zdate(+$horolog,3),"-",2) }
+	set year = +year, month = +month
+	if (year<100) {
+		if (year<20) { set year = 2000 + year }
+		else { set year = 1900 + year }
+	}
+	if (month<12) { quit ($zdateh((month+1)_"/1/"_year)-1) } //#
+	quit $zdateh(month_"/31/"_year)
+]]></Implementation>
+</Method>
+
+<Method name="GetMonthName">
+<Description>
+Название месяца</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>monthNo:%Integer=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ set month=$piece("январь,февраль,март,апрель,май,июнь,июль,август,сентябрь,октябрь,ноябрь,декабрь",",",monthNo)
+ quit month
+]]></Implementation>
+</Method>
+
+<Method name="GetMonthNameRp">
+<Description>
+Название месяца в родительном падеже</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>monthNo:%Integer=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ set month=$piece("января,февраля,марта,апреля,мая,июня,июля,августа,сентября,октября,ноября,декабря",",",monthNo)
+ quit month
+]]></Implementation>
+</Method>
+
+<Method name="GetCountOfMonth">
+<Description>
+Количество месяцев между датами</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>date1:p6.dt.Date="",date2:p6.dt.Date=""</FormalSpec>
+<ReturnType>%Integer</ReturnType>
+<Implementation><![CDATA[
+	if ((date1="") || (date2="")) { quit "" } //#
+	set tempDate=date1
+	set count=0
+	while (tempDate<date2) {
+		set tempDate=..GetFirstDayOfNextMonth(tempDate)
+		set count=count+1
+	}
+	quit count
+]]></Implementation>
+</Method>
+</Class>
+</Export>

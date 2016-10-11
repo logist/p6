@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20" zv="Cache for Windows (Intel) 5.2.3 (Build 710)" ts="2007-06-18 18:06:22">
+<Routine name="UnitTest" type="INC" timestamp="60799,65109"><![CDATA[
+#def1arg AssertEquals(%args)      do ..AssertEqualsViaMacro(##quote(%args),%args)
+#def1arg AssertNotEquals(%args)   do ..AssertNotEqualsViaMacro(##quote(%args),%args)
+#def1arg AssertTrue(%args)        do ..AssertTrueViaMacro(##quote(%args),%args)
+#def1arg AssertNotTrue(%args)     do ..AssertNotTrueViaMacro(##quote(%args),%args)
+#def1arg AssertStatusOK(%args)    do ..AssertStatusOKViaMacro(##quote(%args),%args)
+#def1arg AssertStatusNotOK(%args) do ..AssertStatusNotOKViaMacro(##quote(%args),%args)
+#def1arg AssertOK(%args)          do ..AssertStatusOKViaMacro(##quote(%args),%args)
+#def1arg AssertNotOK(%args)       do ..AssertStatusNotOKViaMacro(##quote(%args),%args)
+#def1arg AssertStatusEquals(%args) do ..AssertStatusEqualsViaMacro(##quote(%args),%args)
+#def1arg AssertFilesSame(%args)   do ..AssertFilesSameViaMacro(##quote(%args),%args)
+#;
+#define LogMessage(%message)    do ..LogMessage(%message)
+#;
+]]></Routine>
+</Export>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.view">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.control</Super>
+<TimeCreated>60852,69236.937932</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<XData name="Style">
+<Data><![CDATA[
+<style type="text/css">
+.p6view {
+	font-weight:bold;
+}
+</style>
+]]></Data>
+</XData>
+
+<Method name="%OnAddToPageAfter">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if ..label="" {
+		set form=..%GetForm()
+		set className=form.%controller.modelClass
+		set ..label=##class(p6.ClassDefinition).GetPropertyCaption(className,..dataBinding)
+	}
+	if ..id="" {
+		set ..id=$tr(..dataBinding,"%.()","____")
+	}
+	if ..name="" {
+		set ..name=..id
+	}
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%DrawHTML">
+<Implementation><![CDATA[
+	set form=..%GetForm()
+	set className=form.%controller.modelClass
+	set property=..dataBinding
+	set propertyType=##class(p6.ClassDefinition).GetPropertyType(className,property)
+	
+	if (..value]"") && ##class(p6.ClassDefinition).IsClassPersistent(propertyType) {
+		set data=$zobjclassmethod(propertyType,"GetDisplayValue",..value)
+	} else {
+		set data=..value
+	}
+	
+	if data="" set data=$c(13)
+	
+	
+	
+	&html<<div class="p6view">>
+	set temp=$ZCVT(data,"O","HTML")
+	if property="Description" {
+		if className="xpm.Task" {
+			set num=($LENGTH(temp,"http://")-1)
+			set alredy=0
+			if num'=0 {
+				for i=1:1:num {
+					set tempWthSpac=$TR(temp,$C(13)," ")
+					set tempWthSpac=$TR(tempWthSpac,$C(10)," ")
+					set startStr=$PIECE(tempWthSpac,"http://",1,i+alredy)
+					set endStr=$PIECE(tempWthSpac,"http://",i+alredy+1,$LENGTH(tempWthSpac,"http://"))
+					set urlStr="http://"_$PIECE(endStr," ",1)
+					set endStr2=$PIECE(endStr," ",2,$LENGTH(endStr," "))
+					
+					set startStr=$EXTRACT(temp,1,$LENGTH(startStr))
+					set urlStr=$EXTRACT(temp,$LENGTH(startStr)+1,($LENGTH(startStr)+$LENGTH(urlStr)))
+					set endStr2=$EXTRACT(temp,$LENGTH(startStr)+$LENGTH(urlStr)+1,$LENGTH(temp))
+					
+					set temp=startStr_"<A target=_blank href="""_urlStr_""">"_urlStr_"</A> "_endStr2
+					set ^a(i)=temp
+					set alredy=alredy+1
+				}
+			}
+		}
+	}
+	&html<#(##class(p6.Convert).Replace(temp,$c(13),"<br />"))#>
+	&html<</div>>
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.buttonsEdit">
+<Description>
+p6.zen.component.text</Description>
+<Super>%ZEN.Component.control</Super>
+<TimeCreated>60852,70980.044288</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component.</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Property name="btNext">
+<Type>%ZEN.Datatype.boolean</Type>
+</Property>
+
+<Property name="onbtnext">
+<Description>
+Функ вызываеться после копирования</Description>
+<Type>%ZEN.Datatype.eventHandler</Type>
+</Property>
+
+<Method name="%DrawHTML">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set formIndex=..%GetForm().index
+	if ..id="" set ..id="buttonsEdit"
+	&html<<br><center>>
+	if ..btNext {
+		if ..%GetForm().%controller.modelId]"" {
+		&html<<button id="#(..%MakeId("next"))#" style="height:25;" onclick="zenPage.getComponent(#(..index)#).btNextFunc(#(formIndex)#)" title="Следующий">Следующий</button>>
+		}
+	}
+	&html<<button id="#(..%MakeId("save"))#" style="width:35; height:25;" onclick="zenPage.getComponent(#(..index)#).btSave(#(formIndex)#)" title="Сохранить"><img src='#(%request.Application)#/p6/images/buttons/save.gif' border=0></button>>
+	if ..%GetForm().%controller.modelId]"" {
+		&html<<button id="#(..%MakeId("delete"))#" style="width:35; height:25;" onclick="zenPage.getComponent(#(..index)#).btDelete(#(formIndex)#)" title="Удалить"><img src='#(%request.Application)#/p6/images/buttons/delete.gif' border=0></button>>
+		&html<<button id="#(..%MakeId("log"))#" style="width:35; height:25;" onclick="zenPage.getComponent(#(..index)#).btHistory(#(formIndex)#)" title="История"><img src='#(%request.Application)#/p6/images/buttons/writer.gif' border=0></button>>
+	}
+	&html<<button id="#(..%MakeId("close"))#" style="width:35; height:25;" onclick="zenPage.getComponent(#(..index)#).btClose(#(formIndex)#)" title="Отмена"><img src='#(%request.Application)#/p6/images/buttons/exit.gif' border=0></button>>
+	
+
+	&html<</center>>
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="btSave">
+<FormalSpec>formIndex</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var form = zenPage.getComponent(formIndex);
+	if (form.save()) {
+		zenPage.firePopupAction('save',form.controller.getModelId());
+	}
+]]></Implementation>
+</Method>
+
+<Method name="btDelete">
+<FormalSpec>formIndex</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if (!confirm("Вы действительно желаете удалить эту запись?")) return;
+	var form = zenPage.getComponent(formIndex);
+	var sc=form.controller.deleteId(form.controller.getModelId());
+	if (form.controller.modelId=='') {
+		zenPage.firePopupAction('delete');
+	}
+]]></Implementation>
+</Method>
+
+<Method name="btHistory">
+<FormalSpec>formIndex</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var form = zenPage.getComponent(formIndex);
+	zenLaunchPopupWindow("p6.zen.page.LogObject.cls?ClassName="+form.controller.modelClass+"&Id="+form.controller.getModelId());
+]]></Implementation>
+</Method>
+
+<Method name="btClose">
+<FormalSpec>formIndex</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if (zenPage.isPopup) {
+		zenPage.firePopupAction('close','');
+	} else {
+		history.back();
+	}
+]]></Implementation>
+</Method>
+
+<Method name="btNextFunc">
+<FormalSpec>formIndex</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	var form = zenPage.getComponent(formIndex);
+	this.CopyObj(form.controller);
+	zenInvokeCallbackMethod(this.onbtnext);
+	form.controller.raiseDataChange();
+]]></Implementation>
+</Method>
+
+<Method name="CopyObj">
+<FormalSpec>Controller:p6.zen.component.dataController</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<ZenMethod>1</ZenMethod>
+<Implementation><![CDATA[
+	set Form=..%GetForm()
+	set Obj=Controller.GetObject()
+	set NewObj=Obj.%ConstructClone()
+	do Controller.SetObject(NewObj)
+	
+	quit $$$OK
+]]></Implementation>
+</Method>
+</Class>
+</Export>

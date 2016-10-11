@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="9" zv="Cache for Windows NT (Intel/P4) 5.0.4 (Build 829)" ts="2003-12-19 23:29:58">
+<Class name="p6.Horolog">
+<Description>
+Преобразование формата Horolog и TimeStamp</Description>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Library.RegisteredObject</Super>
+<TimeChanged>59522,84597.447079</TimeChanged>
+<TimeCreated>59071,68810</TimeCreated>
+<ClassDefinitionError>0</ClassDefinitionError>
+
+<Method name="LogicalToTimeStamp">
+<Description>
+Преобразование в формате $horolog в тип данных %TimeStamp</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=""</FormalSpec>
+<ReturnType>%TimeStamp</ReturnType>
+<Implementation><![CDATA[
+ if (arg="") { quit "" } //#
+ set date=$zdate(arg,3,,,,,,,"error")
+ set time=+$piece(arg,",",2)
+ if (time=0) { set time="00:00:00" }
+ else { 
+ 	set h=$justify(time#86400\3600,2),m=$justify(time#3600\60,2),
+ 		s=$justify(time#60,2),time=h_":"_m_":"_s,time=$tr(time," ",0)
+ }
+ quit (date_" "_time)
+]]></Implementation>
+</Method>
+
+<Method name="LogicalToReportTime">
+<Description>
+Преобразование в формате $horolog в строку DD.MM.YY HH:MM
+  (обычно для печати отчета)</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>arg:%String=$horolog</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if (arg="") { quit "" } //#
+ set date=##class(p6.Date).LogicalToDisplay($piece(arg,",",1))
+ set time=+$piece(arg,",",2)
+ if (time=0) { set time="00:00" }
+ else {
+	 set h=$justify(time#86400\3600,2),m=$justify(time#3600\60,2),
+	 	time=h_":"_m,time=$tr(time," ",0)
+ }
+ quit (date_" "_time)
+]]></Implementation>
+</Method>
+
+<Method name="DifferenceOfTimeStamps">
+<Description>
+Разность между значениями в формате TimeStamp</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>beginTs:%TimeStamp="",endTs:%TimeStamp="",format:%String="hm"</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if ((beginTs="") || (endTs="")) { quit "" } //#
+ set beginH=$zdatetimeh(beginTs,3,,,,,,,,"error")
+ set endH=$zdatetimeh(endTs,3,,,,,,,,"error")
+ if ((beginH="error") || (endH="error")) { quit "error" } //#
+ set dif=..DifferenceOfLogicals(beginH,endH,format)
+ quit dif
+]]></Implementation>
+</Method>
+
+<Method name="DifferenceOfLogicals">
+<Description>
+Разность между значениями в формате Horolog</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>beginH:%String="",endH:%String="",format:%String="hm"</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+ if ((beginH="") || (endH="")) { quit "" } //#
+ set days=endH-beginH
+ if (days<0) { quit "error" } //#
+ set secs = ($piece(endH,",",2)-$piece(beginH,",",2)) + (days*86400)
+ if (secs<0) { quit "error" } //#
+ set dif=secs
+ if (format="hm") {
+	 set dif=(secs\3600)_":"_$justify(secs#3600\60,2)
+ }
+ set dif = $translate(dif," ","0")
+ quit dif
+]]></Implementation>
+</Method>
+</Class>
+<Checksum value="2577293568"/>
+</Export>

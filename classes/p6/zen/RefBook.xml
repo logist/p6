@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.RefBook">
+<Description>
+RefBook placed on a single page</Description>
+<Super>p6.zen.Page</Super>
+<TimeCreated>60855,55012.038342</TimeCreated>
+
+<Parameter name="APPLICATION">
+<Description>
+Class name of application this page belongs to.</Description>
+<Default>p6.zen.Application</Default>
+</Parameter>
+
+<Parameter name="PAGENAME">
+<Description>
+Displayed name of this page.</Description>
+</Parameter>
+
+<Parameter name="DOMAIN">
+<Description>
+Domain used for localization.</Description>
+<Default>P6</Default>
+</Parameter>
+
+<Property name="className">
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="ClassName"/>
+</Property>
+
+<Property name="where">
+<Type>%ZEN.Datatype.string</Type>
+<Parameter name="ZENURL" value="Where"/>
+</Property>
+
+<Property name="windowType">
+<Description>
+Type of generated refbook. Values are "Open","Modal". </Description>
+<Type>%ZEN.Datatype.string</Type>
+<InitialExpression>"Open"</InitialExpression>
+<Parameter name="VALUELIST" value=",Open,Modal"/>
+<Parameter name="ZENURL" value="WindowType"/>
+</Property>
+
+<XData name="Style">
+<Description>
+This Style block contains page-specific CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+/* @doc="Margins for refbook." */
+body {
+	margin:0.5em; background-color: #E4E4E4;
+}
+</style>
+]]></Data>
+</XData>
+
+<XData name="Contents">
+<Description>
+This XML block defines the contents of this page.</Description>
+<XMLNamespace>http://www.intersystems.com/zen</XMLNamespace>
+<Data><![CDATA[
+<page xmlns="http://www.intersystems.com/zen" xmlns:p6="http://www.dimas.ru/p6" title="">
+<p6:refBook id="refbook" width="100%" height="100%" />
+</page>
+]]></Data>
+</XData>
+
+<Method name="%OnAfterCreatePage">
+<Description>
+Set some refbook properties </Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set RefBook=..%GetComponentById("refbook")
+	set RefBook.className=$$$ZENVAL(..className)
+	if ..where]"" {
+		set RefBook.where=$$$ZENVAL(..where)
+	}
+	set RefBook.windowType=$$$ZENVAL(..windowType)
+	set RefBook.btClose=""
+	set classDescription=##class(p6.ClassDefinition).GetClassDescription($$$ZENVAL(..className))
+	set classDescription=$piece(classDescription,$c(13),1)
+	if classDescription="" set classDescription="Справочник"
+	set ..title=classDescription
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="onPopupAction">
+<FormalSpec>popupName,action,value</FormalSpec>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	if (this.windowType=="Modal") {
+		zenPage.firePopupAction('ok',value);
+	} else {
+		zenPage.getComponentById("refbook").getChildById("table").executeQuery(1);
+	}
+]]></Implementation>
+</Method>
+</Class>
+</Export>

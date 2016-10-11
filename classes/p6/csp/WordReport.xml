@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="20">
+<Class name="p6.csp.WordReport">
+<Description><![CDATA[
+Отчет в Ворде. Делается из обычного вордовского файла при помощи
+функции Сохранить как Html, потом переименовывается в csp и добавляем
+строчку <csp:class super="p6.csp.WordReport"> ]]></Description>
+<ClassType/>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%CSP.Page</Super>
+<TimeCreated>60450,39673</TimeCreated>
+
+<Method name="OnPreHTTP">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	if $find($zutil(5),"TEST")=0 {
+		set %response.ContentType = "application/x-msword"
+	}
+	set %response.Expires = "Thu, 01 Apr 2003 00:00:00 GMT"
+	quit 1
+]]></Implementation>
+</Method>
+
+<Method name="Format">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>aStr:%String</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[	quit ##class(p6.Convert).Replace(aStr,$c(13),"<p class=MsoNormal style='text-align:justify'><span style='mso-tab-count:1'>            </span><span style='font-size:12.0pt;'>")
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,87 @@
+body { background-color: "EEEEEE"; font-family: "Times New Roman";
+    BACKGRoUND-IMAGE: expression('url('+p6ApplicationUrl+'/p6/images/bg_brown.jpg)');
+ }
+
+BODY {scrollbar-face-color:#4E6D90;
+ scrollbar-shadow-color:#FFFFFF; scrollbar-highlight-color:#FFFFFF;
+ scrollbar-3dlight-color:#4E6D90;
+ scrollbar-darkshadow-color:#4E6D90;
+ scrollbar-track-color:#FCFCFC;
+ scrollbar-arrow-color:#FFFFFF;}
+
+h2 { color: "blue"; }
+
+a.Workplace {color: #FFFFFF;
+border: 1px solid;
+background-color: #5A7798;
+padding: 2px;
+padding-left: 3px;
+margin-right:5px;
+font: Verdana, Arial, Helvetica, sans-serif;
+font-weight: bold;
+text-decoration: none;
+border-color: #869CB4 #234A76 #234A76 #869CB4;
+m1argin: 0px;
+wi1dth: 100%;
+text-align: left;}
+
+a.Workplace:hover {
+	border: 1px solid;
+	padding: 2px;
+	padding-left: 4px;
+	background-color: #44658A;
+	border-color: #234A76 #001150 #001150 #234A76;
+	color: #FFFFFF;
+	margin-right:5px;
+	text-decoration: none;}
+
+a.ActiveWorkplace {
+	color: #FFFFFF;
+	border: 1px solid;
+	background-color: #003370;
+	padding: 2px;
+	padding-left: 3px;
+	margin-right:5px;
+	font: Verdana, Arial, Helvetica, sans-serif;
+	font-weight: bold;
+	text-decoration: none;
+	border-color: #001150 #234A76 #234A76 #001150;
+	m1argin: 0px;
+	wi1dth: 100%;
+	text-align: left;}
+
+a.ActiveWorkplace:hover {border: 1px solid;
+padding: 2px;
+padding-left: 4px;
+background-color: #16457E;
+border-color: #234A76 #869CB4 #869CB4 #234A76;
+color: #FFFFFF;
+margin-right:5px;
+text-decoration: none;}
+
+a.menu { font-size:15 pt;}
+
+a { 
+	color: "green"; 
+	background-color2:ABC0CD; 
+	text-decoration:none; 
+	margin-left:1px; margin-right:1px;
+	padding-left:3px; padding-right:3px;
+	}
+a:hover { background-color:#EFE7DF; 
+	color:black; 
+	border-right:  1px solid #7D4A38; 
+	border-bottom:  1px solid #7D4A38; 
+	border-left:  1px solid #B69A8F; 
+	border-top:  1px solid #B69A8F; 
+	margin-right:0px;margin-left:0px;2
+	}
+a:active { background-color:FFFFFF;	color:black; border: 1px solid black; margin-left:0px; margin-right:0px;}
+
+
+dfn.userName { color: "#a0a0a0"; font-style: "normal"; }
+img.bullet { border: 0; width: 14; height: 14; }
+img.importantBullet { border: 0; width: 24; height: 14; }
+table.privateItems  { width: "100%"; }
+table.commonItems {}
+table.cellar { align: "center"; valign: "top"; cellspacing: "0"; cellpadding: "0"; border: "1"; }

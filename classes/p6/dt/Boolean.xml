@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.dt.Boolean">
+<Super>%Boolean</Super>
+<TimeCreated>60478,38623.592062</TimeCreated>
+
+<Method name="StoredToLogical">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec>%val:p6.dt.Boolean</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[+%val
+]]></Implementation>
+</Method>
+</Class>
+</Export>

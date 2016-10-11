@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="9" zv="Cache for Windows NT (Intel/P4) 5.0.1 (Build 544)" ts="2003-05-21 12:08:39">
+<Class name="p6.TempSelection">
+<Description>
+Временная таблица для отчетов, сортировок
+Состоит из полей строковых Selection, Prop1,...,Prop16 по 255 символов
+Selection надо присваивать уникальное значение, индексируется
+Хранится в ^CacheTemp.p6.SelectionD(Id)=Section,...</Description>
+<ClassType>persistent</ClassType>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Persistent</Super>
+<TimeChanged>59310,43718.03</TimeChanged>
+
+<Index name="SelectionIndex">
+<Properties>Selection</Properties>
+</Index>
+
+<Property name="Selection">
+<Description><![CDATA[
+Выборка (раздел) - уникальное имя для набора данных
+Рекомендуется <имя задачи>_" "_$INCREMENT(^CacheTemp.p6.Selection)]]></Description>
+<Type>%String</Type>
+<Required>1</Required>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop1">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop2">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop3">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop4">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop5">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop6">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop7">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop8">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop9">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop10">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop11">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop12">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop13">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop14">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop15">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Property name="Prop16">
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="255"/>
+</Property>
+
+<Method name="Clear">
+<Description>
+Очистка выборки
+- выполнять перед выборкой и после сортировки</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>selection:%String=""</FormalSpec>
+<Implementation><![CDATA[
+	if (selection="") quit  //#
+	&sql(delete from p6.TempSelection where Selection=:selection)
+	quit
+
+]]></Implementation>
+</Method>
+
+<Method name="SelectionName">
+<Description>
+возвращает уникальное имя для свойства Session</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>name:%String=""</FormalSpec>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	quit name_" "_$INCREMENT(^CacheTemp.p6.Selection)
+
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Library.CacheStorage</Type>
+<DataLocation>^CacheTemp.p6.TempSelectionD</DataLocation>
+<DefaultData>TempSelectionDefaultData</DefaultData>
+<IdLocation>^CacheTemp.p6.TempSelectionD</IdLocation>
+<IndexLocation>^CacheTemp.p6.TempSelectionI</IndexLocation>
+<StreamLocation>^CacheTemp.p6.TempSelectionS</StreamLocation>
+<Data name="TempSelectionDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>Selection</Value>
+</Value>
+<Value name="3">
+<Value>Prop1</Value>
+</Value>
+<Value name="4">
+<Value>Prop2</Value>
+</Value>
+<Value name="5">
+<Value>Prop3</Value>
+</Value>
+<Value name="6">
+<Value>Prop4</Value>
+</Value>
+<Value name="7">
+<Value>Prop6</Value>
+</Value>
+<Value name="8">
+<Value>Prop6</Value>
+</Value>
+<Value name="9">
+<Value>Prop7</Value>
+</Value>
+<Value name="10">
+<Value>Prop8</Value>
+</Value>
+<Value name="11">
+<Value>Prop9</Value>
+</Value>
+<Value name="12">
+<Value>Prop10</Value>
+</Value>
+<Value name="13">
+<Value>Prop11</Value>
+</Value>
+<Value name="14">
+<Value>Prop12</Value>
+</Value>
+<Value name="15">
+<Value>Prop13</Value>
+</Value>
+<Value name="16">
+<Value>Prop14</Value>
+</Value>
+<Value name="17">
+<Value>Prop15</Value>
+</Value>
+<Value name="18">
+<Value>Prop16</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+<Checksum value="1395110135"/>
+</Export>

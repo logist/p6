@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.component.hgroup">
+<Super>%ZEN.Component.hgroup</Super>
+<TimeCreated>60855,61908.607379</TimeCreated>
+
+<Parameter name="NAMESPACE">
+<Description>
+This is the XML namespace for this component</Description>
+<Default>http://www.dimas.ru/p6</Default>
+</Parameter>
+
+<Parameter name="DEFAULTWIDTH">
+<Default>100%</Default>
+</Parameter>
+
+<Parameter name="DEFAULTCELLSIZE">
+<Default>stretch</Default>
+</Parameter>
+
+<Method name="%DrawHTML">
+<Implementation><![CDATA[
+	for i=1:1:..children.Count() {
+		set Child = ..children.GetAt(i)
+		if (+Child.slice=0) {
+			set Child.slice =  1
+		}
+	}
+
+
+	Do ..%LayoutChildren(..tuple)
+]]></Implementation>
+</Method>
+</Class>
+</Export>

@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="21">
+<Class name="p6.zen.template.PageWizard">
+<Description><![CDATA[
+Studio Template:<br>
+Create a new p6 Zen page class.]]></Description>
+<Super>%ZEN.Template.studioTemplate</Super>
+<TimeCreated>60319,79585.717558</TimeCreated>
+
+<Parameter name="TEMPLATENAME">
+<Default>New p6 Zen Page</Default>
+</Parameter>
+
+<Parameter name="TEMPLATETITLE">
+<Default>p6 Zen Page Wizard</Default>
+</Parameter>
+
+<Parameter name="TEMPLATEDESCRIPTION">
+<Default>Create a new p6 Zen page class.</Default>
+</Parameter>
+
+<Parameter name="TEMPLATETYPE">
+<Default>cls</Default>
+</Parameter>
+
+<Parameter name="TEMPLATEMODE">
+<Description>
+What type of template.</Description>
+<Default>new</Default>
+</Parameter>
+
+<Parameter name="DOMAIN">
+<Description>
+Domain used for localization.</Description>
+<Default>p6ZEN</Default>
+</Parameter>
+
+<Parameter name="GLOBALTEMPLATE">
+<Description>
+If this is true then even if this template is tied to a specific namespace it
+will be available in any namespace and it will be up to the template to make sure
+it looks for any specific data in the target namespace.</Description>
+<Type>BOOLEAN</Type>
+<Default>0</Default>
+</Parameter>
+
+<XData name="Style">
+<Description>
+This Style block contains page-specific CSS style definitions.</Description>
+<Data><![CDATA[
+<style type="text/css">
+</style>
+]]></Data>
+</XData>
+
+<XData name="templateBody">
+<Description>
+This XML block defines the contents of the body pane of this Studio Template.</Description>
+<Data><![CDATA[
+<pane id="body" xmlns="http://www.intersystems.com/zen">
+
+<vgroup labelPosition="left" cellStyle="padding: 2px; padding-left: 5px; padding-right: 5px;">
+<html id="desc" OnDrawContent="%GetDescHTML"/>
+<dataCombo label="Model Class:"
+		id="ctrlModelClass"
+		name="ModelClass"
+		title="Class name of the model class" 
+		editable="true"
+		unrestricted="true"
+		searchKeyLen="0"
+		multiColumn="false"
+		displayColumns="1"
+		valueColumn="1"
+		choiceColumn="1"
+		maxRows="500"
+		size="40"
+		dropdownWidth="20.0em"
+		OnCreateResultSet="CreateModelClassRS"
+		onchange="zenPage.updateState();"
+/>
+
+<dataCombo label="Package Name:"
+		id="ctrlPackage"
+		name="Package"
+		required="true"
+		labelClass="zenRequired"
+		title="Package name for the new page"
+		editable="true"
+		unrestricted="true"
+		searchKeyLen="10"
+		maxRows="500"
+		size="40"
+		dropdownWidth="20.0em"
+		OnCreateResultSet="CreatePackageRS"
+		onchange="zenPage.updateState();"
+/>
+
+<text label="Class Name:" 
+	id="ctrlClassName"
+	name="ClassName"
+	size="40"
+	required="true"
+	labelClass="zenRequired"
+	title="Class name for the new component" 
+	onchange="zenPage.updateState();"
+/>
+
+<dataCombo label="Application:"
+		id="ctrlApplication"
+		name="Application"
+		title="Class name of the application this page belongs to" 
+		editable="true"
+		unrestricted="true"
+		searchKeyLen="0"
+		multiColumn="false"
+		displayColumns="1"
+		valueColumn="1"
+		choiceColumn="1"
+		maxRows="500"
+		size="40"
+		dropdownWidth="20.0em"
+		OnCreateResultSet="CreateApplicationRS"
+		onchange="zenPage.updateState();"
+/>
+
+
+<radioSet label="Type:" 
+	id="ctrlType"
+	name="Type"
+	valueList="dynamicForm,staticForm,register"
+	labelClass="zenRequired"
+	title="Type of component to create" 
+	value="dynamicForm"
+/>
+
+<textarea label="Description:" 
+	id="ctrlDescription"
+	name="Description"
+	rows="4"
+	cols="50"
+	title="Description for the new component" 
+	onchange="zenPage.updateState();"
+/>
+</vgroup>
+</pane>
+]]></Data>
+</XData>
+
+<Method name="%GetDescHTML">
+<Description>
+Provide contents of description component.</Description>
+<FormalSpec>pSeed:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Write $$$TextHTML("This wizard creates a new p6 Zen MVC page class."),"<br/>"
+	Write $$$TextHTML("Fill in the form below and then press Finish to create a new class.")
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="%OnAfterCreatePage">
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#; plug in default values
+	Do %page.%SetValueById("ctrlPackage",##class(%ZEN.Utils).GetDefaultPackage())
+	Do %page.%SetValueById("ctrlApplication",##class(%ZEN.Utils).GetDefaultApplication())
+	//Do %page.%SetValueById("ctrlDomain",##class(%ZEN.Utils).GetDefaultDomain())
+	//Do %page.%SetValueById("ctrlXMLNS",##class(%ZEN.Utils).GetDefault("XMLNamespace"))
+	
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="onstartHandler">
+<Description>
+This is called when the template is first displayed;
+This provides a chance to set focus etc.</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	// give focus to name
+	var ctrl = zenPage.getComponentById('ctrlModelClass');
+	if (ctrl) {
+		ctrl.focus();
+		ctrl.select();
+	}
+]]></Implementation>
+</Method>
+
+<Method name="formValidationHandler">
+<Description>
+Validation handler for form built-into template.</Description>
+<Language>javascript</Language>
+<Implementation><![CDATA[
+	// test if class name is valid
+	var pkgName = zenPage.getComponentById('ctrlPackage').getValue();
+	var clsName = zenPage.getComponentById('ctrlClassName').getValue();
+
+	var msg = this.IsValidClassName(pkgName + "." + clsName);
+
+	if ('' != msg) {
+		alert(msg);
+		return false;
+	}
+
+	return true;
+]]></Implementation>
+</Method>
+
+<Method name="%TemplateHeader">
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	Write "<?xml version=""1.0"" encoding=""Windows-1251""?>",!
+	Write "<template><![CDATA[BODY"_..#DELIM
+	Kill %session.Data("Template")
+	Quit
+]]></Implementation>
+</Method>
+
+<Method name="%OnTemplateAction">
+<Description>
+This method is called when the template is complete. Any
+output to the principal device is returned to the Studio.</Description>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tPackage = ..%GetValueByName("Package")
+	Set tClassName = ..%GetValueByName("ClassName")
+	Set tDescription = ..%GetValueByName("Description")
+	Set tApplication = ..%GetValueByName("Application")
+	Set tType = ..%GetValueByName("Type")
+	Set tModelClass = ..%GetValueByName("ModelClass")
+	
+	Set cls = tPackage_"."_tClassName
+	Set classDescription = ##class(p6.ClassDefinition).GetClassDescription(cls)
+	
+	#; create content of new class definition
+	Do ..%SetClassName(cls)
+	
+	#; update defaults
+	Do ##class(%ZEN.Utils).SetDefaultPackage(tPackage)
+	
+	#; process description
+	If (tDescription '= "") {
+		For i = 1:1:$length(tDescription,$char(13,10)) {
+			Set line = $piece(tDescription,$char(13,10),i)
+			Write "/// ",line,!
+		}
+	}
+	
+	Set tSuper = $Case(tType,"dynamicForm":"p6.zen.EditPage",:"p6.zen.EditPage")
+	
+	Write "Class ",cls," Extends ",tSuper,!
+	Write "{",!!
+
+	Write "Parameter PAGENAME = """_classDescription_""";",!!
+
+	
+	#; style sheet
+	If (tType'="dynamicForm") {
+		Write "XData Style",!
+		Write "{",!
+		Write "<style type=""text/css"">",!
+		Write "</style>",!
+		Write "}",!!
+	}
+
+	If (tType="dynamicForm") {
+		Write "XData editPane"
+		Write:$ZV]'"5.2" " [XMLNamespace=""http://www.intersystems.com/zen""]"
+		Write !
+		Write "{",!
+		Write "<pane  xmlns=""http://www.intersystems.com/zen"" xmlns:p6=""http://www.dimas.ru/p6"" id=""editPane"">",!
+		Write "<p6:dataController id=""source""",!
+		Write " modelClass="""_tModelClass_""" modelId=""#(%page.objectId)#""/>",!
+		Write "<p6:dynaForm id=""myForm"" layout=""vertical"" labelPosition=""left"" controllerId=""source"">",!
+		Write "</p6:dynaForm>",!
+		Write "</pane>",!
+		Write "}",!
+	}
+
+	If (tType="staticForm") {
+		Write "XData editPane"
+		Write:$ZV]'"5.2" " [XMLNamespace=""http://www.intersystems.com/zen""]"
+		Write !
+		Write "{",!
+		Write "<pane  xmlns=""http://www.intersystems.com/zen"" xmlns:p6=""http://www.dimas.ru/p6"" id=""editPane"">",!
+		Write "<p6:dataController id=""source""",!
+		Write " modelClass="""_tModelClass_""" modelId=""#(%page.objectId)#""/>",!
+		Write "<form id=""myForm"" layout=""vertical"" labelPosition=""left"" controllerId=""source"">",!
+		do ..WriteControls(tModelClass)
+		Write "<p6:buttonsEdit />",!
+		Write "</form>",!
+		Write "</pane>",!
+		Write "}",!
+	}
+
+	#; end of class
+	Write "}",!
+
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="WriteControls">
+<Description>
+Write controls for specific class</Description>
+<FormalSpec>aClassName:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	do $zobjclassmethod(aClassName,"%GetPropertyInfo",.info,1)
+	for {
+		set fieldName=$order(info($get(fieldName)))
+		quit:fieldName=""
+		set type=##class(p6.Convert).Replace(info(fieldName,"%type"),"p6.zen.component.","p6:")
+		set sortedFields(info(fieldName))=$lb(fieldName,type)
+	}
+	for {
+		set fieldNumber=$order(sortedFields($get(fieldNumber)))
+		quit:fieldNumber=""
+		write "<",$lg(sortedFields(fieldNumber),2)
+			," dataBinding=""",$lg(sortedFields(fieldNumber),1),""" />",!
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="CreatePackageRS">
+<Description>
+Create the result set used by the Package dataCombo.</Description>
+<FormalSpec>*tSC:%Status,pInfo:%ZEN.Auxiliary.QueryInfo</FormalSpec>
+<ReturnType>%ResultSet</ReturnType>
+<Implementation><![CDATA[
+	Set tRS = ""
+	Set tSC = $$$OK
+
+	Set tRS = ##class(%ResultSet).%New()
+	Set tRS.ClassName = "%ZEN.Utils"
+	Set tRS.QueryName = "EnumeratePackages"
+	Quit tRS
+]]></Implementation>
+</Method>
+
+<Method name="CreateModelClassRS">
+<Description>
+Create the result set used by the Package dataCombo.</Description>
+<FormalSpec>*tSC:%Status,pInfo:%ZEN.Auxiliary.QueryInfo</FormalSpec>
+<ReturnType>%ResultSet</ReturnType>
+<Implementation><![CDATA[
+	Set tRS = ""
+	Set tSC = $$$OK
+
+	Set tRS = ##class(%ResultSet).%New()
+	Set tRS.ClassName = "%Dictionary.ClassDefinition"
+	Set tRS.QueryName = "Extent"
+	Quit tRS
+]]></Implementation>
+</Method>
+
+<Method name="CreateApplicationRS">
+<Description>
+Create the result set used by the Application dataCombo.</Description>
+<FormalSpec>*tSC:%Status,pInfo:%ZEN.Auxiliary.QueryInfo</FormalSpec>
+<ReturnType>%ResultSet</ReturnType>
+<Implementation><![CDATA[
+	Set tRS = ""
+	Set tSC = $$$OK
+
+	Set tRS = ##class(%ResultSet).%New()
+	Set tRS.ClassName = "%ZEN.Utils"
+	Set tRS.QueryName = "EnumerateApplications"
+	Quit tRS
+]]></Implementation>
+</Method>
+</Class>
+</Export>
